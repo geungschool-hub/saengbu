@@ -1157,8 +1157,42 @@ function closeModal(yes){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function todayStr(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 
+/* ---------------- 링크로 명단 불러오기 (#import=base64) ----------------
+   데이터는 URL 해시에만 존재 — 서버로 전송되지 않음. 확인 후 새 반만 추가(빈 동명 반은 교체). */
+function handleHashImport(){
+  const m = location.hash.match(/^#import=(.+)$/);
+  if(!m) return;
+  const strip = ()=>{ try{ history.replaceState(null,'',location.pathname+location.search); }catch(_){ location.hash=''; } };
+  let incoming;
+  try{
+    const bin = atob(decodeURIComponent(m[1]));
+    incoming = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c=>c.charCodeAt(0))));
+    if(!incoming || !incoming.classes || typeof incoming.classes!=='object') throw 0;
+  }catch(_){ strip(); alert('가져오기 링크의 데이터를 읽지 못했습니다.'); return; }
+  strip();
+  const names = Object.keys(incoming.classes);
+  const toAdd = names.filter(n=> !state.classes[n]);
+  const replaceable = names.filter(n=> state.classes[n] && Object.keys(state.classes[n].students||{}).length===0);
+  const dup = names.filter(n=> state.classes[n] && !replaceable.includes(n));
+  const target = [...toAdd, ...replaceable];
+  if(target.length===0){ alert('이미 모든 반이 들어와 있어 새로 가져올 항목이 없습니다.'); return; }
+  const total = target.reduce((a,n)=> a+Object.keys(incoming.classes[n].students||{}).length, 0);
+  const msg = `링크로 전달된 명단을 불러옵니다.\n\n추가할 반 ${target.length}개 (학생 ${total}명):\n${target.join(', ')}`
+    + (dup.length?`\n\n이미 데이터가 있는 반(${dup.join(', ')})은 그대로 둡니다.`:'') + `\n\n진행할까요?`;
+  confirmModal(msg, false, ()=>{
+    target.forEach(n=>{
+      const c = incoming.classes[n]; if(!c.students) c.students = {};
+      ensureItems(c);
+      Object.values(c.students).forEach(st=>ensureAreas(st));
+      state.classes[n] = c;
+    });
+    if(incoming.current && state.classes[incoming.current]) state.current = incoming.current;
+    normalizeState(); save(); openNo=null; renderAll();
+  });
+}
+
 /* ---------------- boot ---------------- */
-load(); renderAll();
+load(); renderAll(); handleHashImport();
 </script>
 </body>
 </html>
