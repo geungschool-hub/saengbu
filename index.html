@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>생기부 통합 작성 도우미</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue-pastel:#C5E3F7; --green-pastel:#C3E9CC;
+  --blue-dark:#1255A0;   --green-dark:#2A7A38;
+  --red-accent:#C0392B;  --amber:#E67E22;
+  --text-main:#1A1A1A;   --text-light:#555; --line:#BBBBBB;
+  --bg:#EAF1F8; --white:#fff;
+  --ok:#0a7d28; --warn:#E67E22; --bad:#C0392B;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text-main);}
+body{min-height:100vh;display:flex;justify-content:center;padding:14px;padding:calc(14px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));}
+.container{width:100%;max-width:980px;}
+h1{font-size:19px;margin:0;color:var(--blue-dark);}
+.sub{font-size:11.5px;color:var(--text-light);margin-top:2px;}
+
+/* ---- top bar ---- */
+.topbar{background:var(--white);border-radius:14px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px;}
+.topbar .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.spacer{flex:1 1 auto;}
+.classsel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+select,input,textarea{font-family:inherit;font-size:16px;color:var(--text-main);}
+select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9px;background:#fff;font-weight:700;color:var(--blue-dark);}
+.subjin{padding:7px 10px;border:1.5px solid #d4dde6;border-radius:9px;background:#fff;min-width:130px;max-width:190px;}
+.savestat{font-size:11.5px;color:var(--ok);min-width:54px;text-align:right;}
+
+/* ---- buttons ---- */
+.btn{border:none;border-radius:9px;padding:8px 13px;font-size:13.5px;font-weight:500;cursor:pointer;min-height:40px;color:#fff;background:var(--blue-dark);transition:transform .05s;}
+.btn:active{transform:translateY(1px);}
+.btn.green{background:var(--green-dark);} .btn.amber{background:var(--amber);}
+.btn.red{background:var(--red-accent);} .btn.gray{background:#7a8794;}
+.btn.ghost{background:#eef3f8;color:var(--blue-dark);border:1.5px solid #cfe0f0;}
+.btn.sm{padding:6px 10px;min-height:34px;font-size:12.5px;}
+.btn.block{width:100%;}
+.btn:disabled{opacity:.5;cursor:default;}
+.iconbtn{background:#eef3f8;color:var(--blue-dark);border:1.5px solid #cfe0f0;border-radius:9px;min-height:40px;padding:8px 11px;font-size:13px;cursor:pointer;}
+
+/* ---- student cards ---- */
+.card{background:var(--white);border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:9px;overflow:hidden;}
+.chead{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;user-select:none;}
+.cno{background:var(--blue-pastel);color:var(--blue-dark);font-weight:700;border-radius:8px;min-width:34px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0 6px;}
+.cname{font-weight:700;font-size:15.5px;}
+.cdots{display:flex;gap:4px;margin-left:2px;}
+.cdot{width:9px;height:9px;border-radius:50%;background:#e2e8ef;}
+.cdot.has{background:var(--green-dark);}
+.chev{margin-left:auto;color:#9aa7b4;transition:transform .15s;font-size:13px;}
+.card.open .chev{transform:rotate(180deg);}
+.cbody{display:none;padding:2px 15px 18px;border-top:1px solid #eef1f5;}
+.card.open .cbody{display:block;}
+
+/* ---- area tabs ---- */
+.tabs{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 10px;}
+.tab{border:1.5px solid #d4dde6;background:#f4f8fc;color:var(--text-light);border-radius:20px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-weight:500;}
+.tab.on{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark);}
+.tab.on.green{background:var(--green-dark);border-color:var(--green-dark);}
+.tab.on.amber{background:var(--amber);border-color:var(--amber);}
+.tab .tdot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--green-dark);margin-left:5px;vertical-align:middle;}
+
+/* ---- panel sections ---- */
+.sec{margin-bottom:14px;}
+.sec h3{font-size:13px;margin:0 0 7px;color:var(--blue-dark);display:flex;align-items:center;gap:6px;}
+.sec h3 .hint{font-size:10.5px;color:var(--text-light);font-weight:400;}
+.field{font-size:13px;margin-bottom:8px;}
+.field label{display:block;font-size:11.5px;color:var(--text-light);margin-bottom:3px;}
+input.txt,textarea.txt{width:100%;border:1.5px solid #d4dde6;border-radius:9px;padding:9px 10px;font-size:16px;background:#fff;line-height:1.55;}
+textarea.txt{resize:vertical;}
+input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
+
+/* ---- logs ---- */
+.logadd{display:flex;flex-direction:column;gap:7px;background:#f6fafd;border:1px solid #e3edf6;border-radius:10px;padding:10px;margin-bottom:9px;}
+.logadd .lr{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.logadd input.date{border:1.5px solid #d4dde6;border-radius:8px;padding:6px 8px;font-size:16px;}
+.seg{display:inline-flex;border-radius:8px;overflow:hidden;border:1.5px solid #d4dde6;}
+.seg button{border:none;background:#fff;width:44px;height:44px;font-size:17px;cursor:pointer;color:#b3bfca;border-right:1px solid #e3e9ef;}
+.seg button:last-child{border-right:none;}
+.seg button.on.g{background:var(--green-dark);color:#fff;}
+.seg button.on.m{background:var(--amber);color:#fff;}
+.seg button.on.b{background:#7a8794;color:#fff;}
+.seglbl{font-size:10.5px;color:var(--text-light);}
+.loglist{display:flex;flex-direction:column;gap:6px;}
+.logitem{display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #e8eef4;border-radius:9px;padding:8px 10px;}
+.logitem .lmeta{font-size:10.5px;color:var(--text-light);white-space:nowrap;}
+.logitem .ltext{flex:1;font-size:13px;line-height:1.5;white-space:pre-wrap;}
+.glyph{font-weight:700;}
+.glyph.g{color:var(--green-dark);} .glyph.m{color:var(--amber);} .glyph.b{color:#7a8794;}
+.xbtn{background:none;border:none;color:#c0392b;cursor:pointer;font-size:18px;line-height:1;min-width:40px;min-height:40px;}
+.empty{font-size:12px;color:#9aa7b4;padding:4px 2px;}
+
+/* ---- draft + linter ---- */
+.draftbox{border:1.5px solid #d4dde6;border-radius:10px;overflow:hidden;}
+.draftbox textarea{border:none;border-radius:0;width:100%;padding:11px;font-size:16px;line-height:1.75;min-height:120px;resize:vertical;}
+.draftbox textarea:focus{outline:none;}
+.meter{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:7px 11px;background:#f6fafd;border-top:1px solid #e3edf6;font-size:11.5px;color:var(--text-light);}
+.cnt{font-weight:700;}
+.cnt.ok{color:var(--ok);} .cnt.warn{color:var(--warn);} .cnt.over{color:var(--bad);}
+.chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
+.chip{font-size:11px;border-radius:12px;padding:3px 9px;font-weight:500;}
+.chip.bad{background:#fbe4e1;color:var(--bad);}
+.chip.warn{background:#fdeccf;color:#9a5a12;}
+.chip.tip{background:#eaf3ff;color:var(--blue-dark);}
+.chip.good{background:#e3f5e8;color:var(--ok);}
+.genrow{display:flex;gap:7px;margin:9px 0;flex-wrap:wrap;}
+.genrow .btn{flex:1;min-width:130px;}
+.genmsg{font-size:11.5px;margin-top:6px;min-height:14px;}
+.genmsg.err{color:var(--bad);} .genmsg.ok{color:var(--ok);} .genmsg.busy{color:var(--blue-dark);}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #cfe0f0;border-top-color:var(--blue-dark);border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:4px;}
+@keyframes sp{to{transform:rotate(360deg);}}
+
+/* ---- modal ---- */
+.modal-back{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;}
+.modal-back.on{display:flex;}
+.modal{background:#fff;border-radius:14px;padding:18px;max-width:520px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,.25);}
+.modal h2{font-size:16px;margin:0 0 12px;color:var(--blue-dark);}
+.modal p{font-size:13.5px;line-height:1.6;white-space:pre-wrap;margin:0 0 14px;}
+.modal .mrow{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;}
+.modal label{display:block;font-size:12px;color:var(--text-light);margin:10px 0 4px;}
+.note{font-size:11.5px;color:var(--text-light);background:#f6fafd;border:1px solid #e3edf6;border-radius:9px;padding:9px 11px;line-height:1.55;}
+
+/* ---- 위계 평가 ---- */
+.lvrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 2px;border-bottom:1px dashed #e8eef4;}
+.lvname{font-size:12.5px;font-weight:700;color:var(--blue-dark);min-width:90px;}
+select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background:#fff;max-width:100%;min-height:44px;}
+.lvsent{flex:1 1 100%;font-size:12.5px;line-height:1.55;}
+.lvhint{color:#9aa7b4;font-size:11.5px;}
+.itembox{border:1px solid #e3e9ef;border-radius:10px;padding:10px;margin-bottom:9px;background:#fbfdff;}
+.itemhead{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
+.lvledit{display:flex;gap:7px;align-items:flex-start;margin-top:6px;}
+.lvbadge{color:#fff;font-weight:700;border-radius:7px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;margin-top:8px;}
+
+/* ---- 진행 현황 ---- */
+.modal.wide{max-width:880px;}
+.dashwrap{overflow-x:auto;margin:4px 0 10px;}
+.dtbl{border-collapse:collapse;width:100%;font-size:12.5px;}
+.dtbl th,.dtbl td{border:1px solid #e3e9ef;padding:6px 9px;text-align:center;vertical-align:middle;white-space:nowrap;}
+.dtbl th{background:var(--blue-pastel);color:var(--blue-dark);font-size:12px;}
+.dtbl td.stu{text-align:left;font-weight:500;}
+.dtbl tr.sum td{background:#f6fafd;font-size:11.5px;color:var(--text-light);}
+.dcell{cursor:pointer;}
+.dcell:hover{background:#f0f6fc;}
+.dc-ok{color:var(--ok);font-weight:700;} .dc-warn{color:var(--warn);font-weight:700;} .dc-over{color:var(--bad);font-weight:700;}
+.dc-mat{color:#9a5a12;background:#fdeccf;border-radius:9px;padding:2px 8px;font-size:11px;}
+.dc-none{color:#c5ced6;}
+
+.credit{text-align:center;font-size:11px;color:#888;padding:22px 0 6px;}
+.hidden{display:none!important;}
+@media (max-width:480px){
+  .genrow .btn{min-width:100%;}
+  h1{font-size:17px;}
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="topbar">
+    <div class="row">
+      <div>
+        <h1>생기부 통합 작성 도우미</h1>
+        <div class="sub">담임 행특·창체 + 교과 세특을 한 학생 카드에서 · 오프라인 보관(이 기기)</div>
+      </div>
+      <div class="spacer"></div>
+      <button class="iconbtn" onclick="openDash()">📊 현황</button>
+      <button class="iconbtn" onclick="openSettings()">⚙️ 설정</button>
+      <span class="savestat" id="saveStat"></span>
+    </div>
+    <div class="classsel">
+      <select class="cls" id="classSel" onchange="switchClass(this.value)"></select>
+      <button class="iconbtn" onclick="addClass()">＋반</button>
+      <button class="iconbtn" onclick="renameClass()">✏️</button>
+      <button class="iconbtn" onclick="deleteClass()">🗑️</button>
+      <input class="subjin" id="subjInput" type="text" placeholder="교과 과목명(예: 통합과학)" oninput="onSubjectInput(this.value)" onchange="renderStudents()">
+      <span class="spacer"></span>
+      <button class="iconbtn" onclick="openRoster()">📋 명단</button>
+      <button class="iconbtn" onclick="exportJSON()">⬇ 백업</button>
+      <button class="iconbtn" onclick="document.getElementById('mergeFile').click()">➕ 병합</button>
+      <button class="iconbtn" onclick="document.getElementById('importFile').click()">⬆ 복원</button>
+      <input type="file" id="mergeFile" accept="application/json" class="hidden" onchange="mergeJSON(event)">
+      <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importJSON(event)">
+    </div>
+  </div>
+
+  <div id="students"></div>
+
+  <div class="credit">Claude AI로 이 앱을 제작함 by 고은표</div>
+</div>
+
+<!-- roster modal -->
+<div class="modal-back" id="rosterBack">
+  <div class="modal">
+    <h2>학생 명단 붙여넣기</h2>
+    <p style="font-size:12.5px;color:#555;">한 줄에 한 명씩. <b>번호 이름</b> 형식(번호 생략 시 자동 부여). 예: <code>3 김하늘</code><br>기존 학생의 기록은 번호 기준으로 유지됩니다.</p>
+    <textarea class="txt" id="rosterText" rows="9" placeholder="1 김하늘&#10;2 이서준&#10;3 박지유"></textarea>
+    <div class="mrow">
+      <button class="btn gray" onclick="closeRoster()">취소</button>
+      <button class="btn green" onclick="applyRoster()">적용</button>
+    </div>
+  </div>
+</div>
+
+<!-- settings modal -->
+<div class="modal-back" id="setBack">
+  <div class="modal">
+    <h2>⚙️ AI 초안 설정</h2>
+    <label>Anthropic API 키</label>
+    <input class="txt" id="apiKeyInput" type="password" placeholder="sk-ant-...">
+    <label>모델</label>
+    <select class="txt" id="modelInput">
+      <option value="claude-opus-4-8">Claude Opus 4.8 — 최고 품질 (입력 $5 / 출력 $25 per 1M)</option>
+      <option value="claude-sonnet-4-6">Claude Sonnet 4.6 — 균형 (입력 $3 / 출력 $15)</option>
+      <option value="claude-haiku-4-5">Claude Haiku 4.5 — 저비용·빠름 (입력 $1 / 출력 $5)</option>
+    </select>
+    <div class="note" style="margin-top:12px;">
+      🔒 API 키는 <b>이 기기의 브라우저(localStorage)에만</b> 저장되며 소스코드·서버·깃·백업 파일에 들어가지 않습니다.<br>
+      ⚠️ <b>AI가 만든 문구를 그대로 학생부에 입력하는 것은 금지</b>되어 있습니다. 이 도구는 교사 관찰자료에 근거한 <b>초안</b>만 제시하며, 사실 확인·최종 입력은 교사가 합니다.<br>
+      <span style="color:#999;">초안 1건당 대략 입력 1~2천 토큰 + 출력 0.7천 토큰 정도 사용됩니다.</span>
+    </div>
+    <div class="mrow">
+      <button class="btn gray" onclick="closeSettings()">취소</button>
+      <button class="btn green" onclick="saveSettings()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 위계 항목 관리 modal -->
+<div class="modal-back" id="itemsBack">
+  <div class="modal wide">
+    <h2 id="itemsTitle"></h2>
+    <div class="note" style="margin-bottom:10px;">항목 = 수행평가·관찰 영역 단위. <b>[자동 생성]</b>은 항목명에 맞는 위계 1~10 기본 문장을 만들며, 각 문장은 직접 수정할 수 있습니다. 이 설정은 <b>현재 반 전체 공용</b>이고, 학생 카드에서는 항목별 수준(1~10)만 고르면 됩니다.</div>
+    <div id="itemsBody"></div>
+    <div class="mrow">
+      <button class="btn ghost" onclick="addItem()">＋ 항목 추가</button>
+      <button class="btn green" onclick="closeItems()">완료</button>
+    </div>
+  </div>
+</div>
+
+<!-- 진행 현황 modal -->
+<div class="modal-back" id="dashBack">
+  <div class="modal wide">
+    <h2>📊 진행 현황 — <span id="dashCls"></span></h2>
+    <div class="dashwrap" id="dashBody"></div>
+    <div class="note">숫자=초안 글자수(<span class="dc-ok">여유</span>·<span class="dc-warn">한도 임박</span>·<span class="dc-over">초과</span>) · <span class="dc-mat">재료</span>=누가기록/참고자료/위계만 있음 · — =미착수 · <b>셀을 누르면 해당 학생·영역으로 이동</b></div>
+    <div class="mrow">
+      <button class="btn gray" onclick="closeDash()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- confirm modal -->
+<div class="modal-back" id="modalBack">
+  <div class="modal">
+    <p id="modalMsg"></p>
+    <div class="mrow">
+      <button class="btn gray" onclick="closeModal(false)">취소</button>
+      <button class="btn" id="modalOk" onclick="closeModal(true)">확인</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   생기부 통합 작성 도우미 — 단일 HTML, localStorage, Claude API 직접호출
+   ============================================================ */
+
+const STORE_KEY = "saengbuTonghap_v1";
+
+const AREAS = [
+  { k:'subject',  t:'교과 세부능력 및 특기사항', short:'교과세특', limit:500, color:'green'  },
+  { k:'homeroom', t:'행동특성 및 종합의견', short:'행특',     limit:300, color:'amber'  },
+  { k:'autonomy', t:'자율활동',            short:'자율',     limit:500, color:'blue'   },
+  { k:'career',   t:'진로활동',            short:'진로',     limit:500, color:'blue'   },
+  { k:'club',     t:'동아리활동',          short:'동아리',   limit:500, color:'green'  },
+];
+const AREA_HINT = {
+  subject:  '해당 교과 수업에서 성취기준 도달 과정과 탐구·활동 참여를 학생 개인의 성취과정·성취특성이 드러나게 서술. 수업 활동의 단순 나열이나 성취수준에 이미 명시된 지식의 단순 서술은 지양.',
+  homeroom: '수시 관찰에 근거해 학생을 총체적으로 이해할 수 있는 종합의견. 학습·인성·태도·성장의 구체적 행동 근거 중심으로 서술.',
+  autonomy: '자율활동에서 드러난 학생의 개별적 특성·역할·기여가 드러나게 서술. 단순 행사 참여 나열은 지양.',
+  career:   '진로 탐색·활동에서 드러난 관심·노력·성장 과정을 서술. (진로희망 분야는 별도 칸에 적으며, 본문에서 특정 진로를 단정 짓지 않음.)',
+  club:     '동아리 활동에서 학생의 역할·기여·탐구 과정이 드러나게 서술.',
+};
+const STATES = ["g","m","b"];
+const GLYPH  = { g:"◎", m:"○", b:"–" };
+const IMPLBL = { g:"인상적", m:"보통", b:"아쉬움" };
+
+/* ---------------- 위계(1~10) 문장 템플릿 — 과세특 도구(gwaseteuk)에서 이식 ---------------- */
+const LV_COLORS = ['#9E9E9E','#8D6E63','#78909C','#F57C00','#FB8C00','#FFA726','#43A047','#2E7D32','#1565C0','#0D47A1'];
+function detectActivityType(name){
+  if(/탐구|실험|관찰|측정|분석|조사|검증/.test(name)) return 'inquiry';
+  if(/발표|토론|토의|논의|PT|프레젠/.test(name)) return 'presentation';
+  if(/보고서|논술|글쓰기|서술|에세이|작성/.test(name)) return 'writing';
+  if(/모둠|협력|팀|그룹|협동/.test(name)) return 'teamwork';
+  return 'general';
+}
+const SENTENCE_TEMPLATES = {
+  inquiry: [
+    t => `${t}에서 탐구의 목적과 절차 파악에 어려움을 겪으며, 실험 수행과 결과 해석 전반에서 교사의 안내가 필요함.`,
+    t => `${t}에서 기초적인 실험 절차는 따를 수 있으나, 변인의 의미와 결과의 타당성을 스스로 판단하는 데 한계를 보임.`,
+    t => `${t}에서 제시된 절차에 따라 탐구를 수행하고 결과를 기록할 수 있으나, 이론과 연결하여 해석하는 과정에서 논리적 연결이 부족함.`,
+    t => `${t}에서 탐구 절차를 성실히 이행하고 주요 결과를 정리하였으며, 간단한 결론을 스스로 도출하는 기초 역량을 갖춤.`,
+    t => `${t}에서 탐구 목적에 맞게 변인을 구분하여 실험을 수행하고, 결과를 이론과 연결하여 해석하는 과학적 사고력을 보임.`,
+    t => `${t}에서 변인을 체계적으로 통제하고 결과를 다각도로 분석하여, 이론적 근거를 바탕으로 논리적인 결론을 도출하는 능력이 돋보임.`,
+    t => `${t}에서 탐구 설계의 타당성을 스스로 검토하고, 예상과 다른 결과에 대해 오차 원인을 근거 있게 규명하는 비판적 과학 태도를 보임.`,
+    t => `${t}에서 탐구 과정을 주도적으로 수행하며 결과를 심층적으로 해석하고, 학습 내용과의 연결을 통해 수준 높은 과학적 통찰을 드러냄.`,
+    t => `${t}에서 기존 탐구 방법의 한계를 인식하고 개선 방향을 제안하며, 결과에서 스스로 새로운 탐구 문제를 도출하는 창의적 역량이 탁월함.`,
+    t => `${t}에서 탐구 전 과정을 독립적으로 설계·수행·분석하고, 결과를 창의적으로 해석하여 심화 탐구로 확장하는 자기주도적 면모를 보임.`,
+  ],
+  presentation: [
+    t => `${t}에서 발표 내용의 논리적 구성에 어려움을 보이며, 핵심 내용 전달과 청중과의 소통이 전반적으로 부족함.`,
+    t => `${t}에서 기본 내용을 전달할 수 있으나, 논거 구성이 미흡하고 청중의 이해를 고려한 표현에서 한계를 보임.`,
+    t => `${t}에서 준비한 내용을 전달할 수 있으나, 주장과 근거의 연결이 부족하고 질의에 대한 대응이 제한적임.`,
+    t => `${t}에서 핵심 내용을 정리하여 청중에게 전달하였으며, 발표의 기본 흐름을 유지하는 능력을 갖춤.`,
+    t => `${t}에서 주장-근거-사례의 구조로 내용을 구성하고, 청중의 수준에 맞게 핵심 내용을 효과적으로 전달하는 능력을 보임.`,
+    t => `${t}에서 논거를 갖추어 설득력 있게 의견을 전개하고, 예상 질문을 고려한 구성으로 청중의 이해를 높이는 능력이 돋보임.`,
+    t => `${t}에서 발표 내용의 논리적 허점을 사전에 검토하고, 질의응답에서 근거를 들어 명확하게 대응하는 능력이 우수함.`,
+    t => `${t}에서 시각 자료와 구체적 근거로 주장을 뒷받침하며, 상대방의 날카로운 질문에도 논리적으로 대응하는 탁월한 발표력을 발휘함.`,
+    t => `${t}에서 독창적인 관점으로 주제를 재해석하고, 청중의 사고를 자극하는 수준 높은 논의를 이끌며 토론의 질을 높임.`,
+    t => `${t}에서 발표 전반을 창의적으로 구성하고, 논리적 설득력과 탁월한 의사소통 능력으로 청중의 이해와 공감을 이끌어냄.`,
+  ],
+  writing: [
+    t => `${t}에서 글의 기본 구조 파악에 어려움을 보이며, 내용 구성과 표현 전반에서 지속적인 보완이 필요함.`,
+    t => `${t}에서 기초적인 내용을 서술할 수 있으나, 논리적 구성과 근거 제시가 미흡하여 완성도가 낮음.`,
+    t => `${t}에서 주어진 형식에 따라 내용을 서술할 수 있으나, 주장과 근거의 연결과 문장 표현이 다소 부족함.`,
+    t => `${t}에서 내용을 체계적으로 정리하고 기본적인 논거를 갖추어 서술하였으며, 보고서의 형식을 충족함.`,
+    t => `${t}에서 주제에 맞게 내용을 구성하고 근거를 들어 논리적으로 서술하는 능력을 보임.`,
+    t => `${t}에서 다양한 자료를 활용하여 근거를 뒷받침하고, 자신의 견해를 논리적이고 명확하게 전개하는 서술 능력이 돋보임.`,
+    t => `${t}에서 글의 논리적 흐름을 스스로 검토하고 수정하는 과정에서 비판적 사고력을 발휘하며, 완성도 높은 글을 작성함.`,
+    t => `${t}에서 핵심 개념을 심층적으로 분석하고 다양한 관점을 통합하여, 설득력 있는 논거로 구성된 우수한 글을 완성함.`,
+    t => `${t}에서 기존 논의를 비판적으로 검토하고 독창적인 관점을 제시하며, 학문적 서술 형식을 갖춘 수준 높은 보고서를 완성함.`,
+    t => `${t}에서 주제를 창의적으로 재해석하고 탁월한 논리 구성력과 표현력으로 독자의 이해와 공감을 이끄는 완성도 높은 글을 작성함.`,
+  ],
+  teamwork: [
+    t => `${t}에서 자신의 역할을 파악하고 수행하는 데 어려움을 보이며, 협력적 참여가 전반적으로 제한적임.`,
+    t => `${t}에서 주어진 역할을 부분적으로 수행하였으나, 모둠 목표와 연결하여 기여하는 데 한계를 보임.`,
+    t => `${t}에서 주어진 역할을 수행하고 기본적인 협력 활동에 참여하였으나, 능동적인 기여가 부족함.`,
+    t => `${t}에서 자신의 역할을 성실히 이행하고 동료의 의견을 경청하며 협력하는 기초 역량을 갖춤.`,
+    t => `${t}에서 역할을 충실히 수행하면서 동료와 소통하고, 모둠 결과물 완성에 실질적으로 기여하는 능력을 보임.`,
+    t => `${t}에서 모둠 내 의견 조율에 기여하고, 자신의 역할을 넘어 전체 결과물의 완성도를 높이는 데 능동적으로 참여함.`,
+    t => `${t}에서 구성원의 강점을 파악하여 역할 분배를 제안하고, 의견 충돌 상황에서 합리적인 합의를 이끌어내는 조율 역량이 우수함.`,
+    t => `${t}에서 모둠 활동을 주도하면서도 구성원 모두의 참여를 이끌어내며, 자신의 결과물을 공유하여 모둠 전체의 이해 수준을 높임.`,
+    t => `${t}에서 독창적인 아이디어로 모둠 결과물의 방향을 제시하고, 구성원의 성장에 기여하는 협력적 리더십을 발휘함.`,
+    t => `${t}에서 목표 설정부터 결과물 완성까지 모둠 전체를 이끌며, 구성원 각자의 잠재력을 끌어내는 탁월한 협력적 리더십을 보임.`,
+  ],
+  general: [
+    t => `${t}에서 학습 내용의 기초 개념 이해에 어려움을 보이며, 핵심 내용 파악과 과제 수행에서 교사의 안내가 필요함.`,
+    t => `${t}에서 기초적인 내용을 부분적으로 이해하고 있으나, 핵심 개념의 연결과 적용에서 불완전한 수행을 보임.`,
+    t => `${t}에서 기본 개념을 이해하고 과제를 수행할 수 있으나, 개념 간 연관성 파악이나 심화 적용에서 한계를 보임.`,
+    t => `${t}에서 기본 개념을 이해하고 주어진 활동을 성실히 수행하였으며, 학습 내용을 단순한 상황에 적용할 수 있는 수준을 갖춤.`,
+    t => `${t}에서 핵심 개념을 정확히 이해하고, 학습한 내용을 바탕으로 문제를 논리적으로 분석하여 적절한 결론을 도출하는 능력을 보임.`,
+    t => `${t}에서 핵심 개념을 깊이 이해하고 다양한 상황에 적용하며, 학습 내용 간 연관성을 스스로 파악하여 자신의 언어로 재구성하는 모습이 돋보임.`,
+    t => `${t}에서 개념 간 연결고리를 스스로 발견하고 논거를 갖추어 견해를 전개하며, 주어진 범위를 넘어 스스로 탐구 범위를 확장하는 모습을 보임.`,
+    t => `${t}에서 핵심 개념을 심층적으로 이해하고 다양한 맥락에 유연하게 적용하며, 스스로 탐구 질문을 설정하고 검증하는 논리적 사고력이 두드러짐.`,
+    t => `${t}에서 개념 간 관계를 독창적으로 재구성하고 자신의 관점을 설득력 있게 전개하며, 동료의 사고를 자극하고 학습 공동체에 기여함.`,
+    t => `${t}에서 탁월한 이해력과 창의적 사고로 학습의 경계를 스스로 확장하며, 지식을 생산하고 공유하는 자기주도적 학습자의 면모가 두드러짐.`,
+  ],
+  homeroom: [
+    t => `${t} 면에서 아직 발전이 필요한 단계로, 담임교사와의 상담을 통해 개선 방향을 함께 탐색 중임.`,
+    t => `${t} 면에서 기초적인 수준을 갖추고 있으나, 일관성 있는 실천으로 이어지는 데 한계가 있음.`,
+    t => `${t} 면에서 일정한 수준을 유지하고 있으며, 개선의 의지를 보이는 긍정적인 모습이 관찰됨.`,
+    t => `${t} 면에서 성실한 태도로 꾸준히 노력하고 있으며, 또래 관계에서도 안정적인 모습을 보임.`,
+    t => `${t} 면에서 기대 수준에 부합하는 행동을 보이며, 학교생활 전반에 긍정적인 영향을 미침.`,
+    t => `${t} 면에서 또래에 비해 성숙한 모습을 발휘하며, 주변 학생들에게 좋은 영향을 주는 존재로 인식됨.`,
+    t => `${t} 면에서 탁월한 역량을 발휘하며, 학급 분위기 형성에 긍정적으로 기여하는 모습이 돋보임.`,
+    t => `${t} 면에서 모범적인 행동을 일관되게 보이며, 스스로를 성찰하고 꾸준히 성장하는 학생임.`,
+    t => `${t} 면에서 학급 내 신뢰받는 존재로, 어려운 상황에서도 주위 학생들을 배려하고 이끄는 성숙함을 보임.`,
+    t => `${t} 면에서 남다른 역량과 품성으로 학급 구성원 모두에게 긍정적인 영향을 미치는 진정한 리더의 면모를 보임.`,
+  ],
+  autonomous: [
+    t => `${t}에서 활동의 목적을 충분히 이해하지 못한 채 수동적으로 참여하였으며, 활동 이후 의미 있는 성찰이 부족함.`,
+    t => `${t}에서 기본적인 참여는 하였으나, 활동 내용에 대한 이해와 참여 의지가 미흡한 편임.`,
+    t => `${t}에서 주어진 역할을 수행하고 기본 활동 과정에 참여하였으나, 자발적인 기여가 부족함.`,
+    t => `${t}에서 성실하게 참여하고 활동 목적을 이해하며, 활동을 통해 얻은 점을 정리할 수 있음.`,
+    t => `${t}에서 활동 전반에 적극 참여하고, 활동에서 배운 점을 자신의 성장과 연결하여 성찰하는 모습을 보임.`,
+    t => `${t}에서 자발적이고 능동적인 태도로 참여하여 활동의 목적을 충실히 실현하고 의미 있는 경험을 만들어냄.`,
+    t => `${t}에서 활동을 통해 자기 역할의 중요성을 인식하고, 구성원 간 협력의 필요성을 체득하는 성장을 보임.`,
+    t => `${t}에서 주도적으로 참여하여 활동의 방향을 이끌고, 구성원들의 참여를 북돋우며 긍정적인 분위기를 조성함.`,
+    t => `${t}에서 창의적인 아이디어와 솔선수범하는 태도로 활동 전반의 완성도를 높이는 데 핵심적으로 기여함.`,
+    t => `${t}에서 자기주도적 참여와 탁월한 협력적 태도로 활동을 이끌며, 모든 구성원이 의미 있는 경험을 할 수 있도록 기여하는 리더십을 발휘함.`,
+  ],
+  career: [
+    t => `${t}에 참여하였으나, 진로와의 연결이나 자신의 관심 분야에 대한 성찰이 아직 미흡한 편임.`,
+    t => `${t}에 기초적으로 참여하였으며, 자신의 진로 방향에 대한 탐색이 시작 단계에 있음.`,
+    t => `${t}을 통해 관심 분야에 대한 기본적인 이해를 넓히고, 진로에 대한 관심을 구체화하는 계기를 가짐.`,
+    t => `${t}을 통해 자신의 관심 분야와 강점을 파악하는 기회를 갖고, 진로 방향을 구체적으로 탐색하기 시작함.`,
+    t => `${t}을 통해 자신의 진로 목표와 연결하여 의미 있는 탐색을 수행하고, 활동 내용을 진로 계획에 반영하는 모습을 보임.`,
+    t => `${t}에서 자신의 진로 목표와 관련하여 능동적으로 정보를 탐색하고, 구체적인 준비 방향을 설정하는 진로 의식을 보임.`,
+    t => `${t}에서 직업 세계와 학습 내용을 연결하여 미래 진로에 대한 구체적인 비전을 형성하고, 실천 계획을 수립하는 역량을 발휘함.`,
+    t => `${t}에서 진로에 대한 깊이 있는 탐색과 주도적인 정보 수집을 통해 목표 의식이 뚜렷해지고, 자기주도적 진로 설계 역량이 두드러짐.`,
+    t => `${t}에서 관심 분야의 전문적 내용을 탐구하고 자신의 역량과 연결하여 명확한 진로 목표를 설정하며, 이를 실현하기 위한 구체적인 행동 계획을 세움.`,
+    t => `${t}에서 진로에 대한 탁월한 통찰력과 자기주도적 탐구로 명확한 목표 의식과 실행력을 갖추며, 주변 학생들의 진로 탐색에도 긍정적인 영향을 미침.`,
+  ],
+};
+function templatesFor(ak, topic){
+  if(ak==='subject') return SENTENCE_TEMPLATES[detectActivityType(topic)];
+  if(ak==='homeroom') return SENTENCE_TEMPLATES.homeroom;
+  if(ak==='career')   return SENTENCE_TEMPLATES.career;
+  // 자율·동아리: 활동명이 탐구/발표/모둠형이면 그 템플릿, 아니면 자율활동 템플릿
+  const t = detectActivityType(topic);
+  return t==='general' ? SENTENCE_TEMPLATES.autonomous : SENTENCE_TEMPLATES[t];
+}
+
+let state = { current:null, classes:{}, settings:{ apiKey:"", model:"claude-opus-4-8" } };
+let openNo = null;
+let openArea = 'subject';
+
+/* ---------------- persistence ---------------- */
+function normalizeState(){
+  if(!state.settings) state.settings = { apiKey:"", model:"claude-opus-4-8" };
+  if(!state.classes) state.classes = {};
+  if(Object.keys(state.classes).length === 0){
+    state.classes["2학년 7반"] = { students:{} };
+    state.current = "2학년 7반";
+  }
+  if(!state.current || !state.classes[state.current]) state.current = Object.keys(state.classes)[0];
+  Object.values(state.classes).forEach(c=>{ if(!c.students) c.students = {};
+    ensureItems(c);
+    Object.values(c.students).forEach(s=> ensureAreas(s)); });
+}
+function ensureItems(c){
+  if(!c.items) c.items = {};
+  AREAS.forEach(a=>{ if(!Array.isArray(c.items[a.k])) c.items[a.k] = []; });
+}
+function load(){
+  try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && s.classes) state = s; }catch(e){}
+  normalizeState();
+}
+function ensureAreas(s){
+  if(!s.areas) s.areas = {};
+  AREAS.forEach(a=>{
+    if(!s.areas[a.k]) s.areas[a.k] = { logs:[], paste:"", draft:"" };
+    if(!s.areas[a.k].levels || typeof s.areas[a.k].levels!=='object') s.areas[a.k].levels = {};
+  });
+  if(s.areas.career.hope == null) s.areas.career.hope = "";
+  if(s.areas.club.clubName == null) s.areas.club.clubName = "";
+}
+let _savet;
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); flashSaved(); }
+  catch(e){ document.getElementById('saveStat').textContent = "저장 공간 부족!"; }
+}
+function saveSoon(){ clearTimeout(_savet); _savet = setTimeout(save, 350); }
+function flashSaved(){
+  const el = document.getElementById('saveStat');
+  el.textContent = "저장됨 ✓";
+  clearTimeout(el._t); el._t = setTimeout(()=>{ el.textContent=""; }, 1500);
+}
+function cur(){ return state.classes[state.current]; }
+function stu(no){ return cur().students[no]; }
+function subjName(){ const c=cur(); return ((c && c.subjectName) || '').trim(); }
+function onSubjectInput(v){ if(cur()) cur().subjectName = v; saveSoon(); }
+function syncSubjInput(){ const el=document.getElementById('subjInput'); if(el) el.value = (cur() && cur().subjectName) || ''; }
+
+/* ---------------- class management ---------------- */
+function renderClassSel(){
+  const sel = document.getElementById('classSel');
+  sel.innerHTML = Object.keys(state.classes).map(n=>
+    `<option value="${esc(n)}" ${n===state.current?'selected':''}>${esc(n)}</option>`).join("");
+}
+function switchClass(n){ state.current = n; openNo = null; save(); renderAll(); }
+function addClass(){
+  const n = prompt("새 반 이름 (예: 2학년 8반)");
+  if(!n) return;
+  if(state.classes[n]){ alert("이미 있는 반입니다."); return; }
+  state.classes[n] = { students:{} }; state.current = n; openNo = null; save(); renderAll();
+}
+function renameClass(){
+  const old = state.current; const n = prompt("반 이름 변경", old);
+  if(!n || n===old) return;
+  if(state.classes[n]){ alert("이미 있는 반입니다."); return; }
+  state.classes[n] = state.classes[old]; delete state.classes[old]; state.current = n; save(); renderAll();
+}
+function deleteClass(){
+  if(Object.keys(state.classes).length <= 1){ alert("마지막 반은 삭제할 수 없습니다."); return; }
+  const n = state.current;
+  confirmModal(`'${n}' 반과 소속 학생의 모든 기록을 삭제합니다.\n되돌릴 수 없습니다. 진행할까요?`, true, ()=>{
+    delete state.classes[n]; state.current = Object.keys(state.classes)[0]; openNo=null; save(); renderAll();
+  });
+}
+
+/* ---------------- roster ---------------- */
+function openRoster(){
+  const students = cur().students;
+  const lines = Object.keys(students).map(Number).sort((a,b)=>a-b)
+    .map(no=> `${no} ${students[no].name||""}`.trim());
+  document.getElementById('rosterText').value = lines.join("\n");
+  document.getElementById('rosterBack').classList.add('on');
+}
+function closeRoster(){ document.getElementById('rosterBack').classList.remove('on'); }
+function applyRoster(){
+  const lines = document.getElementById('rosterText').value.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  const old = cur().students;
+  // 1패스: 명시 번호 먼저 수집 → 2패스: 자동번호는 명시번호를 피해 배정
+  const parsed = lines.map(line=>{
+    const m = line.match(/^(\d+)\s+(.*)$/) || line.match(/^(\d+)$/);
+    if(m) return { no:+m[1], name:(m[2]||"").trim(), explicit:true };
+    return { no:null, name:line, explicit:false };
+  });
+  const used = new Set(parsed.filter(p=>p.explicit).map(p=>p.no));
+  const next = {}; let auto = 0;
+  parsed.forEach(p=>{
+    let no;
+    if(p.explicit){ no = p.no; }
+    else { do{ auto++; }while(used.has(auto)); no = auto; used.add(no); }
+    const prev = old[no] || {};
+    const s = { name: p.name||prev.name||("학생"+no), areas: prev.areas };
+    ensureAreas(s);
+    next[no] = s;
+  });
+  const removed = Object.keys(old).map(Number).filter(no=>!(no in next));
+  const doApply = ()=>{ cur().students = next; save(); closeRoster(); renderStudents(); };
+  if(removed.length){
+    const names = removed.map(no=>`${no} ${old[no].name||''}`.trim()).join(', ');
+    confirmModal(`명단에서 빠진 학생 ${removed.length}명의 모든 기록(누가기록·초안)도 함께 삭제됩니다.\n삭제: ${names}\n\n진행할까요?`, true, doApply);
+  } else doApply();
+}
+
+/* ---------------- render ---------------- */
+function renderAll(){ renderClassSel(); syncSubjInput(); renderStudents(); }
+function renderStudents(){
+  const box = document.getElementById('students');
+  const students = cur().students;
+  const nos = Object.keys(students).map(Number).sort((a,b)=>a-b);
+  if(nos.length === 0){
+    box.innerHTML = `<div class="card"><div class="cbody" style="display:block;padding:24px 16px;text-align:center;color:#9aa7b4;">
+      아직 학생이 없습니다. 위 <b>📋 명단</b>으로 우리 반 명단을 붙여넣어 주세요.</div></div>`;
+    return;
+  }
+  box.innerHTML = nos.map(no=> cardHTML(no)).join("");
+  if(openNo!=null){
+    const el = document.querySelector(`.card[data-no="${openNo}"]`);
+    if(el) requestAnimationFrame(()=>{ bindPanel(openNo); });
+  }
+}
+function dotsHTML(s){
+  return `<div class="cdots">${AREAS.map(a=>{
+    const ar = s.areas[a.k]; const has = (ar.draft && ar.draft.trim()) || (ar.logs && ar.logs.length) || Object.values(ar.levels||{}).some(v=>v);
+    return `<span class="cdot ${has?'has':''}" title="${a.short}"></span>`;
+  }).join("")}</div>`;
+}
+function cardHTML(no){
+  const s = stu(no); const isOpen = (no===openNo);
+  return `<div class="card ${isOpen?'open':''}" data-no="${no}">
+    <div class="chead" onclick="toggleOpen(${no})">
+      <span class="cno">${no}</span>
+      <span class="cname">${esc(s.name)}</span>
+      ${dotsHTML(s)}
+      <span class="chev">▼</span>
+    </div>
+    <div class="cbody">${isOpen ? panelHTML(no) : ''}</div>
+  </div>`;
+}
+function panelHTML(no){
+  const s = stu(no);
+  const tabs = `<div class="tabs">${AREAS.map(a=>{
+    const has = (s.areas[a.k].draft||"").trim();
+    const lbl = a.k==='subject' ? (subjName()||'교과세특') : a.short;
+    return `<button class="tab ${a.k===openArea?'on '+a.color:''}" onclick="setArea(${no},'${a.k}')">${esc(lbl)}${has?'<span class="tdot"></span>':''}</button>`;
+  }).join("")}</div>`;
+  return tabs + areaPanel(no, openArea);
+}
+function areaTitleOf(ak, a){
+  if(ak==='subject') return subjName() ? subjName()+' 세부능력 및 특기사항' : '교과 세부능력 및 특기사항';
+  return a.t;
+}
+function areaPanel(no, ak){
+  const s = stu(no); const a = AREAS.find(x=>x.k===ak); const ar = s.areas[ak];
+  const aTitle = areaTitleOf(ak, a);
+  let extra = "";
+  if(ak==='career') extra = `<div class="field"><label>진로 희망분야 (특기사항 '희망분야'에 입력)</label>
+    <input class="txt" type="text" value="${esc(ar.hope||'')}" oninput="setField(${no},'career','hope',this.value)" placeholder="예: 생명공학 연구"></div>`;
+  if(ak==='club') extra = `<div class="field"><label>동아리명</label>
+    <input class="txt" type="text" value="${esc(ar.clubName||'')}" oninput="setField(${no},'club','clubName',this.value)" placeholder="예: 생명과학탐구반"></div>`;
+
+  return `
+  ${extra}
+  ${levelSectionHTML(no, ak)}
+  <div class="sec">
+    <h3>📝 누가기록 <span class="hint">수업·활동 중 관찰 메모를 수시로</span></h3>
+    <div class="logadd">
+      <textarea class="txt" id="logNew-${no}" rows="2" placeholder="관찰 내용을 입력 (예: 삼투 실험에서 변인 통제를 스스로 점검하며 재실험을 제안함)"></textarea>
+      <div class="lr">
+        <input class="date" type="date" id="logDate-${no}" value="${todayStr()}">
+        <span class="seg" id="logImp-${no}" data-imp="">
+          ${STATES.map(st=>`<button onclick="pickNewImp(${no},'${st}')" title="${IMPLBL[st]}">${GLYPH[st]}</button>`).join("")}
+        </span>
+        <span class="seglbl">인상</span>
+        <span class="spacer" style="flex:1"></span>
+        <button class="btn green sm" onclick="addLog(${no},'${ak}')">＋ 기록 추가</button>
+      </div>
+    </div>
+    <div class="loglist">${logListHTML(no, ak)}</div>
+  </div>
+
+  <div class="sec">
+    <h3>📂 참고자료 붙여넣기 <span class="hint">기존 메모·수행평가 결과 등</span></h3>
+    <textarea class="txt" rows="3" placeholder="여기에 기존 메모나 수행평가 결과를 붙여넣으면 초안 생성에 함께 반영됩니다."
+      oninput="setField(${no},'${ak}','paste',this.value)">${esc(ar.paste||'')}</textarea>
+  </div>
+
+  <div class="sec">
+    <h3>✨ ${esc(aTitle)} 초안</h3>
+    <div class="genrow">
+      <button class="btn ${a.color==='green'?'green':a.color==='amber'?'amber':''}" id="genBtn-${no}" onclick="generate(${no},'${ak}')">🤖 AI 초안 생성</button>
+      <button class="btn ghost" onclick="copyPrompt(${no},'${ak}')">📋 프롬프트만 복사</button>
+    </div>
+    <div class="genmsg" id="genMsg-${no}"></div>
+    <div class="draftbox">
+      <textarea id="draft-${no}" placeholder="여기에 ${esc(aTitle)} 문구를 작성·수정합니다. (자동검사: 글자수·금칙어·평어체)"
+        oninput="onDraft(${no},'${ak}')">${esc(ar.draft||'')}</textarea>
+      <div class="meter" id="meter-${no}"></div>
+    </div>
+    <div class="chips" id="lint-${no}"></div>
+    <div style="margin-top:9px;display:flex;gap:7px;">
+      <button class="btn ghost sm" onclick="copyDraft(${no})">📄 문구 복사</button>
+    </div>
+  </div>`;
+}
+function levelSectionHTML(no, ak){
+  const items = itemsFor(ak);
+  const ar = stu(no).areas[ak];
+  let inner;
+  if(items.length===0){
+    inner = `<div class="empty">아직 항목이 없습니다. <b>[⚙ 항목 관리]</b>에서 수행평가·관찰 영역과 위계 1~10 문장을 만들어 두면, 학생마다 수준만 골라 문장을 자동으로 얻습니다. (반 전체 공용)</div>`;
+  } else {
+    inner = items.map(it=>{
+      const lv = (ar.levels||{})[it.id] || '';
+      const sent = lv ? (it.sentences[lv-1]||'') : '';
+      const opts = Array.from({length:10},(_,i)=>i+1).map(n=>{
+        const sn = (it.sentences[n-1]||'').trim();
+        const label = n + (sn ? '. '+sn.slice(0,34)+(sn.length>34?'…':'') : ' (미입력)');
+        return `<option value="${n}"${lv==n?' selected':''}>${esc(label)}</option>`;
+      }).join('');
+      return `<div class="lvrow">
+        <span class="lvname">${esc(it.name||'(항목명 없음)')}</span>
+        <select class="lvsel" onchange="setLevel(${no},'${ak}','${it.id}',this.value)">
+          <option value="">— 수준 선택</option>${opts}
+        </select>
+        <span class="lvsent" id="lvsent-${no}-${it.id}">${sent?esc(sent):'<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>'}</span>
+      </div>`;
+    }).join('') + `<div style="margin-top:9px;">
+      <button class="btn ghost sm" onclick="composeLevels(${no},'${ak}')">⤵ 선택한 위계 문장 조합을 초안에 넣기</button>
+    </div>`;
+  }
+  return `<div class="sec">
+    <h3>📐 위계 평가 <span class="hint">항목별 수준 선택 → 문장 자동</span>
+      <span style="margin-left:auto"><button class="btn ghost sm" onclick="openItems('${ak}')">⚙ 항목 관리</button></span></h3>
+    ${inner}
+  </div>`;
+}
+function logListHTML(no, ak){
+  const logs = stu(no).areas[ak].logs || [];
+  if(logs.length===0) return `<div class="empty">아직 기록이 없습니다.</div>`;
+  return logs.map((lg,i)=>`
+    <div class="logitem">
+      <span class="lmeta">${esc(lg.date||'')}<br>${lg.imp?`<span class="glyph ${lg.imp}">${GLYPH[lg.imp]}</span>`:''}</span>
+      <span class="ltext">${esc(lg.text)}</span>
+      <button class="xbtn" onclick="delLog(${no},'${ak}',${i})" title="삭제">✕</button>
+    </div>`).join("");
+}
+
+/* ---------------- interactions ---------------- */
+function toggleOpen(no){
+  _newImp[no] = null;
+  openNo = (openNo===no) ? null : no;
+  openArea = 'subject';
+  renderStudents();
+  if(openNo===no){
+    const el = document.querySelector(`.card[data-no="${no}"]`);
+    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  }
+}
+function setArea(no, ak){ _newImp[no] = null; openArea = ak; renderStudents(); }
+function bindPanel(no){ refreshMeter(no, openArea); }
+
+let _newImp = {};
+let _gen = {};
+function pickNewImp(no, st){
+  _newImp[no] = (_newImp[no]===st) ? null : st;
+  const seg = document.getElementById('logImp-'+no);
+  seg.querySelectorAll('button').forEach((b,i)=>{ b.className = (_newImp[no]===STATES[i]) ? 'on '+STATES[i] : ''; });
+}
+function addLog(no, ak){
+  const ta = document.getElementById('logNew-'+no);
+  const text = ta.value.trim();
+  if(!text){ ta.focus(); return; }
+  const date = document.getElementById('logDate-'+no).value || todayStr();
+  stu(no).areas[ak].logs.push({ date, imp:_newImp[no]||null, text });
+  _newImp[no] = null;
+  save(); renderStudents();
+}
+function delLog(no, ak, i){
+  confirmModal('이 관찰기록을 삭제할까요? 되돌릴 수 없습니다.', true, ()=>{
+    stu(no).areas[ak].logs.splice(i,1); save(); renderStudents();
+  });
+}
+function setField(no, ak, key, val){ stu(no).areas[ak][key] = val; saveSoon(); }
+
+/* ---------------- 위계 평가 ---------------- */
+function itemsFor(ak){ ensureItems(cur()); return cur().items[ak]; }
+function setLevel(no, ak, itemId, val){
+  const ar = stu(no).areas[ak];
+  if(!ar.levels) ar.levels = {};
+  if(val) ar.levels[itemId] = val; else delete ar.levels[itemId];
+  save();
+  const it = itemsFor(ak).find(x=>x.id===itemId);
+  const el = document.getElementById(`lvsent-${no}-${itemId}`);
+  if(el && it){
+    const sent = val ? (it.sentences[val-1]||'') : '';
+    el.innerHTML = sent ? esc(sent) : '<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>';
+  }
+}
+function composedLevels(no, ak){
+  const ar = stu(no).areas[ak];
+  return itemsFor(ak)
+    .map(it=>{ const lv=(ar.levels||{})[it.id]; return lv ? (it.sentences[lv-1]||'').trim() : ''; })
+    .filter(Boolean).join(' ');
+}
+function hasLevels(no, ak){
+  const ar = stu(no).areas[ak];
+  return itemsFor(ak).some(it=> (ar.levels||{})[it.id] && (it.sentences[(ar.levels||{})[it.id]-1]||'').trim());
+}
+function composeLevels(no, ak){
+  const txt = composedLevels(no, ak);
+  if(!txt){ setGenMsg(no,'err','선택된 위계 문장이 없습니다. 항목별 수준을 먼저 고르세요.'); return; }
+  const apply = ()=>{
+    stu(no).areas[ak].draft = txt; save();
+    const dt = document.getElementById('draft-'+no); if(dt) dt.value = txt;
+    refreshMeter(no, ak);
+    setGenMsg(no,'ok','⤵ 위계 문장 조합을 초안에 넣었습니다. 이 학생만의 특성이 드러나게 다듬어 쓰세요.');
+  };
+  const curDraft = (stu(no).areas[ak].draft||'').trim();
+  if(curDraft && curDraft!==txt){
+    confirmModal('기존 초안을 지우고, 선택한 위계 문장 조합으로 교체합니다.\n진행할까요?', true, apply);
+  } else apply();
+}
+
+/* ---------------- 위계 항목 관리 모달 ---------------- */
+let _itemsArea = null;
+function newItemId(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+function openItems(ak){
+  _itemsArea = ak;
+  renderItemsModal();
+  document.getElementById('itemsBack').classList.add('on');
+}
+function closeItems(){
+  document.getElementById('itemsBack').classList.remove('on');
+  _itemsArea = null;
+  save(); renderStudents();
+}
+function renderItemsModal(){
+  const ak = _itemsArea; if(!ak) return;
+  const a = AREAS.find(x=>x.k===ak);
+  document.getElementById('itemsTitle').textContent = `📐 위계 항목 관리 — ${areaTitleOf(ak, a)}`;
+  const items = itemsFor(ak);
+  document.getElementById('itemsBody').innerHTML = items.length===0
+    ? `<div class="empty">항목이 없습니다. 아래 <b>[＋ 항목 추가]</b>로 시작하세요. (예: '3D 세포 모형 만들기' 수행평가, '교우관계' 관찰 영역)</div>`
+    : items.map((it,i)=>`
+      <div class="itembox">
+        <div class="itemhead">
+          <input class="txt" style="flex:1;min-width:150px;" value="${esc(it.name)}" placeholder="항목명 (예: 유전 원리 탐구, 교우관계)" oninput="onItemName(${i},this.value)">
+          <button class="btn green sm" onclick="autoFillItem(${i})">자동 생성</button>
+          <button class="btn ghost sm" onclick="toggleItemEdit(${i})">위계 문장 <span id="itoggle-${i}">▼</span></button>
+          <button class="xbtn" onclick="delItem(${i})" title="항목 삭제">✕</button>
+        </div>
+        <div class="itembody hidden" id="ibody-${i}">
+          ${it.sentences.map((s,lv)=>`
+            <div class="lvledit">
+              <span class="lvbadge" style="background:${LV_COLORS[lv]}">${lv+1}</span>
+              <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent(${i},${lv},this.value)">${esc(s)}</textarea>
+            </div>`).join('')}
+        </div>
+      </div>`).join('');
+}
+function addItem(){
+  itemsFor(_itemsArea).push({ id:newItemId(), name:'', sentences:Array(10).fill('') });
+  save(); renderItemsModal();
+}
+function delItem(i){
+  const items = itemsFor(_itemsArea); const it = items[i]; if(!it) return;
+  confirmModal(`'${it.name||('항목 '+(i+1))}' 항목을 삭제합니다.\n학생별로 선택해 둔 이 항목의 수준도 함께 지워집니다. 진행할까요?`, true, ()=>{
+    items.splice(i,1);
+    Object.values(cur().students).forEach(s=>{
+      const lv = s.areas && s.areas[_itemsArea] && s.areas[_itemsArea].levels;
+      if(lv) delete lv[it.id];
+    });
+    save(); renderItemsModal();
+  });
+}
+function onItemName(i, v){ itemsFor(_itemsArea)[i].name = v; saveSoon(); }
+function onItemSent(i, lv, v){ itemsFor(_itemsArea)[i].sentences[lv] = v; saveSoon(); }
+function toggleItemEdit(i){
+  const b = document.getElementById('ibody-'+i); if(!b) return;
+  b.classList.toggle('hidden');
+  const t = document.getElementById('itoggle-'+i);
+  if(t) t.textContent = b.classList.contains('hidden') ? '▼' : '▲';
+}
+function autoFillItem(i){
+  const it = itemsFor(_itemsArea)[i]; if(!it) return;
+  const name = (it.name||'').trim();
+  if(!name){ alert('항목명을 먼저 입력하세요.'); return; }
+  const doFill = ()=>{
+    it.sentences = templatesFor(_itemsArea, name).map(fn=>fn(name));
+    save(); renderItemsModal();
+    const b = document.getElementById('ibody-'+i); if(b) b.classList.remove('hidden');
+    const t = document.getElementById('itoggle-'+i); if(t) t.textContent='▲';
+  };
+  if(it.sentences.some(s=>s && s.trim())){
+    confirmModal('이미 입력된 위계 문장을 기본 문장으로 덮어씁니다.\n진행할까요?', true, doFill);
+  } else doFill();
+}
+
+/* ---------------- 진행 현황 ---------------- */
+function openDash(){
+  document.getElementById('dashCls').textContent = state.current;
+  const students = cur().students;
+  const nos = Object.keys(students).map(Number).sort((a,b)=>a-b);
+  const areaLbl = a => a.k==='subject' ? (subjName()||'교과세특') : a.short;
+  if(nos.length===0){
+    document.getElementById('dashBody').innerHTML = `<div class="empty">학생이 없습니다. 먼저 명단을 등록하세요.</div>`;
+  } else {
+    const done = {};
+    AREAS.forEach(a=>{ done[a.k] = nos.filter(no=>{
+      const ar = students[no].areas[a.k]; const ch = countChars(ar.draft||'');
+      return (ar.draft||'').trim() && ch<=a.limit;
+    }).length; });
+    const head = `<tr><th style="width:40px">번호</th><th style="text-align:left">이름</th>${AREAS.map(a=>`<th>${esc(areaLbl(a))}</th>`).join('')}</tr>`;
+    const sum = `<tr class="sum"><td colspan="2" style="text-align:left">완료(자수 내 초안)</td>${AREAS.map(a=>`<td>${done[a.k]} / ${nos.length}</td>`).join('')}</tr>`;
+    const rows = nos.map(no=>{
+      const s = students[no];
+      return `<tr><td>${no}</td><td class="stu">${esc(s.name)}</td>${AREAS.map(a=>
+        `<td class="dcell" onclick="dashGo(${no},'${a.k}')">${dashCellHTML(no, a)}</td>`).join('')}</tr>`;
+    }).join('');
+    document.getElementById('dashBody').innerHTML = `<table class="dtbl"><thead>${head}</thead><tbody>${sum}${rows}</tbody></table>`;
+  }
+  document.getElementById('dashBack').classList.add('on');
+}
+function dashCellHTML(no, a){
+  const ar = stu(no).areas[a.k];
+  if((ar.draft||'').trim()){
+    const ch = countChars(ar.draft);
+    const cls = ch>a.limit ? 'dc-over' : ch>=a.limit*0.92 ? 'dc-warn' : 'dc-ok';
+    return `<span class="${cls}">${ch}자</span>`;
+  }
+  const hasMat = (ar.logs && ar.logs.length) || (ar.paste||'').trim() || Object.values(ar.levels||{}).some(v=>v);
+  return hasMat ? '<span class="dc-mat">재료</span>' : '<span class="dc-none">—</span>';
+}
+function closeDash(){ document.getElementById('dashBack').classList.remove('on'); }
+function dashGo(no, ak){
+  closeDash();
+  _newImp[no] = null; openNo = no; openArea = ak;
+  renderStudents();
+  const el = document.querySelector(`.card[data-no="${no}"]`);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+function onDraft(no, ak){
+  const v = document.getElementById('draft-'+no).value;
+  stu(no).areas[ak].draft = v; saveSoon(); refreshMeter(no, ak);
+}
+
+/* ---------------- counters & linter ---------------- */
+function countChars(str){ return str.replace(/\r/g,'').length; }   // NEIS 자수: 공백·엔터 포함
+function countBytes(str){
+  let b=0;
+  for(const ch of str){
+    if(ch==='\r') continue;
+    if(ch==='\n'){ b+=1; continue; }                 // 엔터 1Byte (검증된 NEIS 기준)
+    const c = ch.charCodeAt(0);
+    if((c>=0xAC00&&c<=0xD7A3)||(c>=0x1100&&c<=0x11FF)||(c>=0x3130&&c<=0x318F)||(c>=0x4E00&&c<=0x9FFF)) b+=3; // 한글/자모/한자 3B
+    else b+=1;                                        // 영문·숫자·공백·특수 1B
+  }
+  return b;
+}
+function endsNominal(s){
+  s = s.trim();
+  let prev;
+  do{ prev = s;
+    s = s.replace(/[.。,;:!?\s]+$/,'');
+    s = s.replace(/[\(（][^()（）]*[\)）]$/,'');       // 끝의 (…) 부가정보 제거
+    s = s.replace(/['"“”‘’『』「」]+$/,'');            // 끝의 따옴표 제거
+  }while(s!==prev);
+  s = s.trim();
+  if(!s) return true;
+  const c = s.charCodeAt(s.length-1);
+  if(c<0xAC00||c>0xD7A3) return false;
+  return (c-0xAC00)%28===16;   // 종성 ㅁ (명사형)
+}
+const BANNED = [
+  {cat:'대회·수상',     lv:'금지', re:/(올림피아드|경시대회|경시|공모전|교내대회|체육대회|학술대회|토론대회|수상(?=\s*(?:경력|실적|내역|하였|하여|함))|입상|장려상|우수상|최우수상|금상|은상|동상)/g},
+  {cat:'학교명·축제',   lv:'금지', re:/([가-힣]{2,}(?:초등학교|중학교|고등학교|여고|남고)|본교|우리\s*학교|[가-힣]{0,5}축제|한마당|체육대회)/g},
+  {cat:'어학·인증시험', lv:'금지', re:/(TOEIC|TOEFL|TEPS|IELTS|토익|토플|텝스|JLPT|HSK|TOSEL|토셀|한국사능력검정)/gi},
+  {cat:'대학·기관 실명', lv:'금지', re:/([가-힣]{2,}(?:대학교|대학원|박물관|미술관|과학관|수목원|연구원|재단|협회|공단|시청|군청|구청|교육청)|대학교|대학원)/g},
+  {cat:'사교육·강사',   lv:'금지', re:/(학원|과외|사교육|인터넷\s*강의|인강|사설\s*강|강사)/g},
+  {cat:'자격증',        lv:'금지', re:/(자격증)/g},
+  {cat:'기업·상호',     lv:'금지', re:/(네이버|유튜브|카카오|구글|페이스북|인스타그램|틱톡|㈜|주식회사)/g},
+  {cat:'장학',          lv:'금지', re:/(장학생|장학금)/g},
+  {cat:'성적·등수',     lv:'주의', re:/(\d+\s*등급|\d+\s*등(?!급|록|장)|\d+\s*점(?!검|차|선|도|에)|\d+\s*위(?!치|험|원|로|하)|\d+\s*%|상위\s*\d+|하위\s*\d+|만점|석차|모의고사|학력평가|백분위)/g},
+  {cat:'논문·특허',     lv:'주의', re:/(소논문|논문|학회지|특허|실용신안|상표권|지식재산)/g},
+  {cat:'가정환경',      lv:'주의', re:/((?:아버지|어머니|부모님|아빠|엄마|삼촌|이모|고모|할아버지|할머니)(?:께서|은|는|이|가|의)?\s*[가-힣]{0,3}(?:직업|직장|회사|근무|사장|대표|교수|의사|변호사|사업|공무원|자영업))/g},
+  {cat:'1인칭·내면',    lv:'주의', re:/(느꼈|느낀\s*점|깨달았|깨달음|배우게\s*되|배움을\s*얻|감명|감동(?:받|함|을|적)|뿌듯|벅찼|벅찬|설레|설렘|행복했|즐거웠|보람을\s*느|다짐함|결심함)/g},
+  {cat:'경어체',        lv:'주의', re:/(습니다|입니다|됩니다|하였습니다|보였습니다)/g},
+  {cat:'문어체 평서형', lv:'주의', re:/(하였다|보였다|이었다|되었다|이다\.|하다\.)/g},
+  {cat:'상투구',        lv:'주의', re:/(장래가\s*촉망|촉망되는|미래의\s*동량|국가의\s*인재|믿어\s*의심치\s*않|두각을\s*나타)/g},
+];
+const STYLE_MAP = [
+  ['열정적','구체 행동으로: 예) 수업 외 자료를 추가 조사하여 보고함'],
+  ['흥미를','예) 관련 후속 질문을 스스로 제기함'],
+  ['성실','예) 실험 절차를 단계별로 점검·기록함'],
+  ['적극적','예) 토의에서 먼저 의견을 제시하고 역할을 맡음'],
+  ['이해도가 높','예) 개념을 다른 사례에 적용하여 재설명함'],
+  ['리더십','예) 역할을 재분배하여 모둠 산출물의 누락을 보완함'],
+  ['매우','부사 대신 근거·행동으로 변별'],
+  ['뛰어난','구체적 산출물·행동으로 대체'],
+];
+function refreshMeter(no, ak){
+  const a = AREAS.find(x=>x.k===ak); if(!a) return;
+  const meter = document.getElementById('meter-'+no);
+  const lint = document.getElementById('lint-'+no);
+  if(!meter || !lint) return;
+  const txt = (document.getElementById('draft-'+no)||{}).value || "";
+  const ch = countChars(txt), by = countBytes(txt);
+  let cls = 'ok'; if(ch > a.limit) cls='over'; else if(ch >= a.limit*0.92) cls='warn';
+  meter.innerHTML = `<span class="cnt ${cls}">${ch} / ${a.limit}자</span><span>· ${by} Byte</span>`
+    + (ch>a.limit ? `<span style="color:var(--bad);">초과 ${ch-a.limit}자 줄이세요</span>` : '');
+
+  // linter
+  const chips = [];
+  if(ch>a.limit) chips.push(`<span class="chip bad">글자수 초과 (${ch}/${a.limit})</span>`);
+  const banHits = {};
+  BANNED.forEach(b=>{ b.re.lastIndex=0; let m; while((m=b.re.exec(txt))){ const key=b.cat+'|'+b.lv; (banHits[key]=banHits[key]||new Set()).add(m[0].trim()); if(m.index===b.re.lastIndex) b.re.lastIndex++; } });
+  Object.keys(banHits).forEach(k=>{
+    const [cat,lv]=k.split('|'); const words=[...banHits[k]].slice(0,4).join(', ');
+    chips.push(`<span class="chip ${lv==='금지'?'bad':'warn'}">${lv==='금지'?'⛔':'⚠'} ${cat}: ${esc(words)}</span>`);
+  });
+  // 평어체 종결 검사
+  if(txt.trim()){
+    const sents = txt.split(/[.。]/).map(s=>s.trim()).filter(Boolean);
+    const bad = sents.filter(s=>!endsNominal(s));
+    if(bad.length) chips.push(`<span class="chip warn">평어체 점검: ${bad.length}개 문장이 명사형(~함/~음)으로 끝나지 않음</span>`);
+  }
+  // 문체 제안
+  STYLE_MAP.forEach(([w,tip])=>{ if(txt.includes(w)) chips.push(`<span class="chip tip">💡 '${w}' → ${esc(tip)}</span>`); });
+
+  if(txt.trim() && chips.length===0) chips.push(`<span class="chip good">✅ 자동검사 통과</span>`);
+  lint.innerHTML = chips.join("");
+}
+
+/* ---------------- AI prompt + API ---------------- */
+const SYSTEM_PROMPT = `당신은 대한민국 고등학교 학교생활기록부(생기부) 작성을 돕는 보조 도구입니다. 교사가 직접 관찰·기록한 자료를 바탕으로 생기부 서술형 문구 '초안'을 생성합니다. 최종 입력은 교사가 검토·수정합니다.
+
+[최상위 원칙 — 절대 위반 불가]
+1. 오직 교사가 제공한 '누가기록', '참고자료', '항목별 평가 수준(위계)'에 적힌 사실만을 근거로 작성한다. 외부 지식·일반론·추측·과장·미사여구를 절대 추가하지 않는다.
+2. 제공된 자료에 없는 활동·사실·감정·다짐은 생성하지 않는다. 자료가 부실하면 부실한 대로 짧게 작성하고, 분량을 채우려 일반적 문구를 덧붙이지 않는다.
+3. 너는 초안만 제시한다. 사실 확인은 교사가 한다.
+
+[문체 규정]
+- 평어체·명사형 종결: 모든 문장을 '~함', '~음', '~임', '~보임', '~드러냄'처럼 받침 ㅁ(명사형)으로 끝낸다.
+- 주어 생략(주어=해당 학생). '학생은~', '~했습니다' 같은 경어체·3인칭 명시 금지.
+- 관찰자(교사) 시점. 학생의 내면(감정·생각·결심)을 1인칭으로 직접 표현 금지.
+  · '깨달았음/느꼈음/알게 됨/배우게 됨' → '~에 대한 소감을 기록함', '~에 대한 생각을 정리함'으로 외부화.
+  · '감탄함/감동함/매료됨/뿌듯함' → '주목함/관심 있게 관찰함/인상 깊게 살펴봄'으로 전환.
+
+[기재 금지 — 절대 포함하지 말 것]
+- 학교명·학교 축제명·별칭, 교내외 대회('대회'라는 단어 포함)와 수상·등수·석차·점수·등급·백분위, 자격증명
+- 공인어학시험·성적, 모의고사·전국연합학력평가 성적, 논문·소논문, 특허 등 지식재산권
+- 부모·친인척의 직업/직장/직위, 특정 대학명, 기업·상호명(네이버·유튜브 등), 학원·과외·강사명, 장학생·장학금, 해외 활동
+- 생존 인물 실명은 지양(역사적 인물은 허용)
+
+[표기 규칙]
+- 한글로 작성. 일반화된 명사(CEO·PD·IT·TV·PPT·SNS·PAPS 등), 고유명사(도서명·저자명), 단위만 영문 허용.
+- 특수문자·문단 구분 기호(번호 매기기) 지양. 줄바꿈 없이 이어 쓴다.
+- 구체적 장소·기관 실명은 일반 명칭으로 치환(예: '국립○○미술관'→'미술관', '○○시청'→'지방자치행정기구'). 단 도서명·탐구 주제명·학과명은 그대로 둔다.
+
+[출력 형식]
+- 완성된 생기부 문구 본문만 출력한다. 설명·머리말·따옴표·코드블록·'초안:' 같은 라벨을 붙이지 않는다.
+- 지정된 영역의 글자수(공백 포함)를 넘지 않게 한다.`;
+
+function buildUserPrompt(no, ak){
+  const s = stu(no); const a = AREAS.find(x=>x.k===ak); const ar = s.areas[ak];
+  const logs = (ar.logs||[]).map(lg=> `- (${lg.date||'날짜미상'}${lg.imp?', 인상:'+IMPLBL[lg.imp]:''}) ${lg.text}`).join("\n") || "기록 없음";
+  const areaTitle = areaTitleOf(ak, a);
+  let head = `[영역] ${areaTitle} — 최대 ${a.limit}자\n[작성 지침] ${AREA_HINT[ak]}`;
+  if(ak==='subject' && subjName()) head += `\n[과목] ${subjName()}`;
+  if(ak==='career' && ar.hope) head += `\n[학생 진로 희망분야] ${ar.hope} (참고용. 본문에서 특정 진로 합격·진학을 단정하지 말 것.)`;
+  if(ak==='club' && ar.clubName) head += `\n[동아리명] ${ar.clubName}`;
+  const lvTxt = itemsFor(ak).map(it=>{
+    const lv = (ar.levels||{})[it.id];
+    const sent = lv ? (it.sentences[lv-1]||'').trim() : '';
+    return (lv && sent) ? `- ${it.name||'항목'} — 수준 ${lv}/10: ${sent}` : null;
+  }).filter(Boolean).join("\n");
+  return `${head}
+
+[항목별 평가 수준(위계)]
+${lvTxt || '없음'}
+
+[누가기록]
+${logs}
+
+[참고자료]
+${(ar.paste||'').trim() || '없음'}
+
+위 항목별 평가 수준·누가기록·참고자료에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 위계 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''} 본문만 출력.`;
+}
+function copyPrompt(no, ak){
+  const full = "[시스템 지침]\n"+SYSTEM_PROMPT+"\n\n=====\n\n"+buildUserPrompt(no, ak);
+  copyText(full, document.getElementById('genMsg-'+no), "프롬프트를 복사했습니다. 외부 AI에 붙여넣어 쓰세요.");
+}
+function setGenMsg(no, cls, txt){ const m=document.getElementById('genMsg-'+no); if(m){ m.className='genmsg '+cls; m.textContent=txt; } }
+async function generate(no, ak){
+  const key = (state.settings.apiKey||"").trim();
+  if(!key){ setGenMsg(no,'err','⚙️ 설정에서 API 키를 먼저 입력하세요. (또는 [프롬프트만 복사]로 외부 AI 사용)'); openSettings(); return; }
+  const s = stu(no); const ar = s.areas[ak];
+  if((!ar.logs || ar.logs.length===0) && !(ar.paste||'').trim() && !hasLevels(no, ak)){
+    setGenMsg(no,'err','누가기록·참고자료·위계 평가 중 하나는 먼저 입력하세요. (없는 내용은 생성하지 않습니다.)'); return;
+  }
+  if(_gen[no]) return;               // 같은 학생 중복 생성 방지
+  _gen[no] = true;
+  const btn = document.getElementById('genBtn-'+no); if(btn) btn.disabled=true;
+  const msg0 = document.getElementById('genMsg-'+no); if(msg0){ msg0.className='genmsg busy'; msg0.innerHTML='<span class="spin"></span>초안 생성 중…'; }
+  const shortName = (AREAS.find(x=>x.k===ak)||{}).short || '';
+  try{
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method:'POST',
+      headers:{
+        'content-type':'application/json',
+        'x-api-key': key,
+        'anthropic-version':'2023-06-01',
+        'anthropic-dangerous-direct-browser-access':'true'
+      },
+      body: JSON.stringify({
+        model: state.settings.model || 'claude-opus-4-8',
+        max_tokens: 1500,
+        system: SYSTEM_PROMPT,
+        messages: [{ role:'user', content: buildUserPrompt(no, ak) }]
+      })
+    });
+    if(!res.ok){
+      let detail=''; try{ const e=await res.json(); detail = e.error?.message || ''; }catch(_){}
+      if(res.status===401) throw new Error('API 키가 올바르지 않습니다. 설정에서 확인하세요.');
+      if(res.status===429) throw new Error('요청 한도 초과(429). 잠시 후 다시 시도하세요.');
+      if(res.status===400 && /credit|balance/i.test(detail)) throw new Error('크레딧/잔액 문제일 수 있습니다: '+detail);
+      throw new Error('오류 '+res.status+(detail?': '+detail:''));
+    }
+    const data = await res.json();
+    let out = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("").trim();
+    out = out.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
+    out = out.replace(/^["'“「]+|["'”」]+$/g,'').trim();
+    ar.draft = out; save();                                  // 상태부터 저장(화면 이동해도 유실 없음)
+    if(openNo===no && openArea===ak){                        // 지금 이 패널을 보고 있을 때만 DOM 반영
+      const dt = document.getElementById('draft-'+no); if(dt) dt.value = out;
+      refreshMeter(no, ak);
+      setGenMsg(no,'ok','✅ 초안 생성 완료. 반드시 사실 확인 후 수정해 사용하세요.');
+    } else {
+      setGenMsg(no,'ok','✅ ['+shortName+'] 초안 생성 완료 · 해당 탭을 열면 확인됩니다.');
+    }
+  }catch(err){
+    const m = (err && err.message) || '';
+    const net = (err instanceof TypeError || /Failed to fetch|Load failed|NetworkError/i.test(m)) ? ' (학교망 차단/네트워크 문제일 수 있음)' : '';
+    setGenMsg(no,'err','⚠ '+(m||'네트워크 오류')+net);
+  }finally{
+    _gen[no] = false;
+    const b = document.getElementById('genBtn-'+no); if(b) b.disabled=false;
+  }
+}
+
+/* ---------------- copy / export / import ---------------- */
+function copyDraft(no){
+  const txt = (document.getElementById('draft-'+no)||{}).value || "";
+  copyText(txt, document.getElementById('genMsg-'+no), "문구를 복사했습니다.");
+}
+function copyText(txt, msgEl, okMsg){
+  if(!txt){ if(msgEl){ msgEl.className='genmsg err'; msgEl.textContent='복사할 내용이 없습니다.'; } return; }
+  const done = ()=>{ if(msgEl){ msgEl.className='genmsg ok'; msgEl.textContent='📄 '+okMsg; } };
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(txt).then(done, ()=>fallbackCopy(txt,done)); }
+  else fallbackCopy(txt, done);
+}
+function fallbackCopy(txt, done){
+  const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); done(); }catch(_){} document.body.removeChild(ta);
+}
+function exportJSON(){
+  const dump = JSON.parse(JSON.stringify(state));
+  if(dump.settings) delete dump.settings.apiKey;   // API 키는 백업 파일에 포함하지 않음
+  const blob = new Blob([JSON.stringify(dump,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `생기부통합_백업_${todayStr()}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function importJSON(e){
+  const f = e.target.files[0]; if(!f) return; const r = new FileReader();
+  r.onload = ()=>{ try{
+    const s = JSON.parse(r.result); if(!s.classes) throw 0;
+    confirmModal('백업 파일로 현재 데이터를 전부 덮어씁니다.\n현재 데이터는 사라집니다. 진행할까요?', true, ()=>{
+      const keepKey = state.settings ? state.settings.apiKey : '';
+      state = s; if(!state.settings) state.settings={apiKey:'',model:'claude-opus-4-8'};
+      if(!state.settings.apiKey && keepKey) state.settings.apiKey = keepKey;
+      normalizeState(); save(); openNo=null; renderAll();
+    });
+  }catch(_){ alert('올바른 백업 파일이 아닙니다.'); } };
+  r.readAsText(f); e.target.value='';
+}
+function mergeJSON(e){
+  const f = e.target.files[0]; if(!f) return; const r = new FileReader();
+  r.onload = ()=>{ try{
+    const s = JSON.parse(r.result); if(!s.classes) throw 0;
+    const incoming = Object.keys(s.classes);
+    const toAdd = incoming.filter(n=>!state.classes[n]);
+    const dup = incoming.filter(n=>state.classes[n]);
+    if(toAdd.length===0){ alert('추가할 새 반이 없습니다. (이미 있는 반은 병합하지 않습니다.)'); return; }
+    const msg = `병합 복원 — 새 반 ${toAdd.length}개를 추가합니다.\n추가: ${toAdd.join(', ')}`
+      + (dup.length?`\n\n이미 있는 반 ${dup.length}개(${dup.join(', ')})는 그대로 둡니다.`:'') + '\n\n진행할까요?';
+    confirmModal(msg, false, ()=>{
+      toAdd.forEach(n=>{ const c=s.classes[n]; if(!c.students) c.students={};
+        ensureItems(c);
+        Object.values(c.students).forEach(st=>ensureAreas(st)); state.classes[n]=c; });
+      state.current = toAdd[0]; save(); openNo=null; renderAll();
+      alert(`완료 — 새 반 ${toAdd.length}개를 추가했습니다.`);
+    });
+  }catch(_){ alert('올바른 백업 파일이 아닙니다.'); } };
+  r.readAsText(f); e.target.value='';
+}
+
+/* ---------------- settings ---------------- */
+function openSettings(){
+  document.getElementById('apiKeyInput').value = state.settings.apiKey || '';
+  document.getElementById('modelInput').value = state.settings.model || 'claude-opus-4-8';
+  document.getElementById('setBack').classList.add('on');
+}
+function closeSettings(){ document.getElementById('setBack').classList.remove('on'); }
+function saveSettings(){
+  state.settings.apiKey = document.getElementById('apiKeyInput').value.trim();
+  state.settings.model = document.getElementById('modelInput').value;
+  save(); closeSettings();
+}
+
+/* ---------------- confirm modal ---------------- */
+let _modalCb = null;
+function confirmModal(msg, danger, cb){
+  document.getElementById('modalMsg').textContent = msg;
+  document.getElementById('modalOk').className = 'btn ' + (danger ? 'red' : 'green');
+  _modalCb = cb;
+  document.getElementById('modalBack').classList.add('on');
+}
+function closeModal(yes){
+  document.getElementById('modalBack').classList.remove('on');
+  if(yes && _modalCb) _modalCb();
+  _modalCb = null;
+}
+
+/* ---------------- utils ---------------- */
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function todayStr(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+
+/* ---------------- boot ---------------- */
+load(); renderAll();
+</script>
+</body>
+</html>
