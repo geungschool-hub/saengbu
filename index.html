@@ -1157,8 +1157,10 @@ function closeModal(yes){
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function todayStr(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
 
-/* ---------------- 링크로 명단 불러오기 (#import=base64) ----------------
-   데이터는 URL 해시에만 존재 — 서버로 전송되지 않음. 확인 후 새 반만 추가(빈 동명 반은 교체). */
+/* ---------------- 링크로 불러오기 (#import=base64) ----------------
+   데이터는 URL 해시에만 존재 — 서버로 전송되지 않음.
+   ① 명단(classes): 확인 후 새 반만 추가(빈 동명 반은 교체)
+   ② 기록(kind:'records'): 발표체크 등 다른 앱의 관찰기록을 누가기록·참고자료로 병합 */
 function handleHashImport(){
   const m = location.hash.match(/^#import=(.+)$/);
   if(!m) return;
@@ -1167,9 +1169,11 @@ function handleHashImport(){
   try{
     const bin = atob(decodeURIComponent(m[1]));
     incoming = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c=>c.charCodeAt(0))));
-    if(!incoming || !incoming.classes || typeof incoming.classes!=='object') throw 0;
+    if(!incoming || typeof incoming!=='object') throw 0;
+    if(incoming.kind!=='records' && (!incoming.classes || typeof incoming.classes!=='object')) throw 0;
   }catch(_){ strip(); alert('가져오기 링크의 데이터를 읽지 못했습니다.'); return; }
   strip();
+  if(incoming.kind==='records'){ importRecords(incoming); return; }
   const names = Object.keys(incoming.classes);
   const toAdd = names.filter(n=> !state.classes[n]);
   const replaceable = names.filter(n=> state.classes[n] && Object.keys(state.classes[n].students||{}).length===0);
@@ -1188,6 +1192,47 @@ function handleHashImport(){
     });
     if(incoming.current && state.classes[incoming.current]) state.current = incoming.current;
     normalizeState(); save(); openNo=null; renderAll();
+  });
+}
+
+/* 기록 병합: { v, kind:'records', source, className, area, students:{ 번호:{name, logs:[{date,imp,text}], paste} } }
+   기존 기록은 지우지 않고 추가만. 같은 내용의 누가기록·이미 들어간 참고자료는 건너뜀(재전송 안전). */
+function importRecords(p){
+  const src = String(p.source || '외부 앱');
+  const areaDef = AREAS.find(a=>a.k===p.area) || AREAS[0];
+  const students = (p.students && typeof p.students==='object') ? p.students : {};
+  const nos = Object.keys(students);
+  if(nos.length===0){ alert('전달된 기록이 없습니다.'); return; }
+  const wanted = (p.className && state.classes[p.className]) ? p.className : null;
+  const target = wanted || state.current;
+  const note = (!wanted && p.className) ? `\n※ '${p.className}' 반이 없어 현재 반으로 병합합니다.` : '';
+  const msg = `${src}에서 보낸 기록을 불러옵니다.\n\n대상 반: ${target}\n영역: ${areaDef.t}\n학생 ${nos.length}명${note}\n\n병합할까요? (기존 기록은 지워지지 않고 추가만 됩니다)`;
+  confirmModal(msg, false, ()=>{
+    const c = state.classes[target];
+    let matched=0, logAdd=0, pasteAdd=0, dup=0; const missing=[];
+    nos.forEach(no=>{
+      const inc = students[no] || {};
+      const st = c.students[no];
+      if(!st){ missing.push((no + ' ' + (inc.name||'')).trim()); return; }
+      matched++; ensureAreas(st);
+      const ar = st.areas[areaDef.k];
+      (Array.isArray(inc.logs) ? inc.logs : []).forEach(lg=>{
+        const text = String((lg && lg.text) || '').trim();
+        if(!text) return;
+        if(ar.logs.some(x=> x.text===text)){ dup++; return; }
+        ar.logs.push({ date: String(lg.date || todayStr()), imp: (lg.imp==='g'||lg.imp==='m'||lg.imp==='b') ? lg.imp : null, text });
+        logAdd++;
+      });
+      const paste = String(inc.paste || '').trim();
+      if(paste){
+        if((ar.paste||'').includes(paste)){ dup++; }
+        else { ar.paste = ((ar.paste||'').trim() ? ar.paste.trim() + '\n\n' : '') + paste; pasteAdd++; }
+      }
+    });
+    save(); openNo=null; renderAll();
+    alert(`기록 병합 완료 — '${target}' 학생 ${matched}명\n누가기록 ${logAdd}건 · 참고자료 ${pasteAdd}건 추가`
+      + (dup ? `\n(이미 있던 내용 ${dup}건은 건너뜀)` : '')
+      + (missing.length ? `\n명단에 없어 건너뛴 학생: ${missing.join(', ')}` : ''));
   });
 }
 
