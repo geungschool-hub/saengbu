@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>생기부 통합 작성 도우미</title>
+<script>try{if(localStorage.getItem('saengbuTonghap_theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
@@ -15,22 +16,47 @@
   --text-main:#1A1A1A;   --text-light:#555; --line:#BBBBBB;
   --bg:#EAF1F8; --white:#fff;
   --ok:#0a7d28; --warn:#E67E22; --bad:#C0392B;
+  /* 중립 표면·테두리 토큰 (다크모드 전환용) */
+  --surface:#fff; --soft:#f6fafd; --soft2:#eef3f8;
+  --brd:#d4dde6; --brd2:#e3edf6; --brd3:#e3e9ef; --divider:#eef1f5;
+  --muted:#9aa7b4; --sel:#e4f0fb; --hover:#eef5fc;
 }
+/* ===== 다크 테마 (토큰만 오버라이드 — 컴포넌트 CSS 불변) ===== */
+html[data-theme="dark"]{
+  --bg:#0e1720; --white:#182633; --surface:#182633; --soft:#14202c; --soft2:#1e2f3e;
+  --brd:#2c3e51; --brd2:#233544; --brd3:#2c3e51; --divider:#22323f;
+  --text-main:#e6edf3; --text-light:#9fb0c0; --line:#33475b; --muted:#7d92a6;
+  --blue-pastel:#1e3a5c; --green-pastel:#1f4030;
+  --blue-dark:#5aa0e6; --green-dark:#5cc47a; --red-accent:#ef7a86; --amber:#f0a848;
+  --ok:#4bb87c; --warn:#f0a848; --bad:#ef7a86;
+  --sel:#20344f; --hover:#1b2a3a;
+  color-scheme:dark;
+}
+html[data-theme="dark"] body{background:var(--bg);}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text-main);}
-body{min-height:100vh;display:flex;justify-content:center;padding:14px;padding:calc(14px + env(safe-area-inset-top)) 14px calc(28px + env(safe-area-inset-bottom));}
-.container{width:100%;max-width:980px;}
+html,body{margin:0;padding:0;height:100%;font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text-main);}
+body{overflow:hidden;}
+/* ===== 앱 셸 (PC): 상단바 고정 · 본문만 스크롤 · 하단 크레딧 고정 ===== */
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}   /* flex여야 읽기전용 배너가 추가돼도 .main만 남은 높이를 먹는다(grid 자동배치 오배정 방지) */
+.main{flex:1 1 auto;min-height:0;overflow:hidden;padding:12px 16px calc(10px + env(safe-area-inset-bottom));}
+.workspace{height:100%;min-height:0;display:grid;gap:12px;grid-template-columns:1fr;}
+@media(min-width:1024px){ .workspace{grid-template-columns:340px minmax(0,1fr);} }
+/* 좁은 화면: 마스터-디테일 토글 (목록 ↔ 편집) */
+@media(max-width:1023px){
+  .workspace.has-sel .stu-master{display:none;}
+  .workspace:not(.has-sel) .stu-detail{display:none;}
+}
 h1{font-size:19px;margin:0;color:var(--blue-dark);}
 .sub{font-size:11.5px;color:var(--text-light);margin-top:2px;}
 
 /* ---- top bar ---- */
-.topbar{background:var(--white);border-radius:14px;padding:14px 16px;box-shadow:0 1px 4px rgba(0,0,0,.06);margin-bottom:12px;}
+.topbar{background:var(--white);padding:10px 16px;padding-top:calc(10px + env(safe-area-inset-top));box-shadow:0 2px 8px rgba(0,0,0,.07);position:relative;z-index:6;}
 .topbar .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
 .spacer{flex:1 1 auto;}
 .classsel{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:10px;}
 select,input,textarea{font-family:inherit;font-size:16px;color:var(--text-main);}
-select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9px;background:#fff;font-weight:700;color:var(--blue-dark);}
-.subjin{padding:7px 10px;border:1.5px solid #d4dde6;border-radius:9px;background:#fff;min-width:130px;max-width:190px;}
+select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9px;background:var(--surface);font-weight:700;color:var(--blue-dark);}
+.subjin{padding:7px 10px;border:1.5px solid var(--brd);border-radius:9px;background:var(--surface);min-width:130px;max-width:190px;}
 .savestat{font-size:11.5px;color:var(--ok);min-width:54px;text-align:right;}
 
 /* ---- buttons ---- */
@@ -38,11 +64,11 @@ select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9p
 .btn:active{transform:translateY(1px);}
 .btn.green{background:var(--green-dark);} .btn.amber{background:var(--amber);}
 .btn.red{background:var(--red-accent);} .btn.gray{background:#7a8794;}
-.btn.ghost{background:#eef3f8;color:var(--blue-dark);border:1.5px solid #cfe0f0;}
+.btn.ghost{background:var(--soft2);color:var(--blue-dark);border:1.5px solid #cfe0f0;}
 .btn.sm{padding:6px 10px;min-height:34px;font-size:12.5px;}
 .btn.block{width:100%;}
 .btn:disabled{opacity:.5;cursor:default;}
-.iconbtn{background:#eef3f8;color:var(--blue-dark);border:1.5px solid #cfe0f0;border-radius:9px;min-height:40px;padding:8px 11px;font-size:13px;cursor:pointer;}
+.iconbtn{background:var(--soft2);color:var(--blue-dark);border:1.5px solid #cfe0f0;border-radius:9px;min-height:40px;padding:8px 11px;font-size:13px;cursor:pointer;}
 
 /* ---- student cards ---- */
 .card{background:var(--white);border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:9px;overflow:hidden;}
@@ -52,14 +78,14 @@ select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9p
 .cdots{display:flex;gap:4px;margin-left:2px;}
 .cdot{width:9px;height:9px;border-radius:50%;background:#e2e8ef;}
 .cdot.has{background:var(--green-dark);}
-.chev{margin-left:auto;color:#9aa7b4;transition:transform .15s;font-size:13px;}
+.chev{margin-left:auto;color:var(--muted);transition:transform .15s;font-size:13px;}
 .card.open .chev{transform:rotate(180deg);}
-.cbody{display:none;padding:2px 15px 18px;border-top:1px solid #eef1f5;}
+.cbody{display:none;padding:2px 15px 18px;border-top:1px solid var(--divider);}
 .card.open .cbody{display:block;}
 
 /* ---- area tabs ---- */
 .tabs{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 10px;}
-.tab{border:1.5px solid #d4dde6;background:#f4f8fc;color:var(--text-light);border-radius:20px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-weight:500;}
+.tab{border:1.5px solid var(--brd);background:var(--soft);color:var(--text-light);border-radius:20px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-weight:500;}
 .tab.on{background:var(--blue-dark);color:#fff;border-color:var(--blue-dark);}
 .tab.on.green{background:var(--green-dark);border-color:var(--green-dark);}
 .tab.on.amber{background:var(--amber);border-color:var(--amber);}
@@ -71,35 +97,35 @@ select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9p
 .sec h3 .hint{font-size:10.5px;color:var(--text-light);font-weight:400;}
 .field{font-size:13px;margin-bottom:8px;}
 .field label{display:block;font-size:11.5px;color:var(--text-light);margin-bottom:3px;}
-input.txt,textarea.txt{width:100%;border:1.5px solid #d4dde6;border-radius:9px;padding:9px 10px;font-size:16px;background:#fff;line-height:1.55;}
+input.txt,textarea.txt{width:100%;border:1.5px solid var(--brd);border-radius:9px;padding:9px 10px;font-size:16px;background:var(--surface);line-height:1.55;}
 textarea.txt{resize:vertical;}
 input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
 
 /* ---- logs ---- */
-.logadd{display:flex;flex-direction:column;gap:7px;background:#f6fafd;border:1px solid #e3edf6;border-radius:10px;padding:10px;margin-bottom:9px;}
+.logadd{display:flex;flex-direction:column;gap:7px;background:var(--soft);border:1px solid var(--brd2);border-radius:10px;padding:10px;margin-bottom:9px;}
 .logadd .lr{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
-.logadd input.date{border:1.5px solid #d4dde6;border-radius:8px;padding:6px 8px;font-size:16px;}
-.seg{display:inline-flex;border-radius:8px;overflow:hidden;border:1.5px solid #d4dde6;}
-.seg button{border:none;background:#fff;width:44px;height:44px;font-size:17px;cursor:pointer;color:#b3bfca;border-right:1px solid #e3e9ef;}
+.logadd input.date{border:1.5px solid var(--brd);border-radius:8px;padding:6px 8px;font-size:16px;}
+.seg{display:inline-flex;border-radius:8px;overflow:hidden;border:1.5px solid var(--brd);}
+.seg button{border:none;background:var(--surface);width:44px;height:44px;font-size:17px;cursor:pointer;color:#b3bfca;border-right:1px solid var(--brd3);}
 .seg button:last-child{border-right:none;}
 .seg button.on.g{background:var(--green-dark);color:#fff;}
 .seg button.on.m{background:var(--amber);color:#fff;}
 .seg button.on.b{background:#7a8794;color:#fff;}
 .seglbl{font-size:10.5px;color:var(--text-light);}
 .loglist{display:flex;flex-direction:column;gap:6px;}
-.logitem{display:flex;gap:8px;align-items:flex-start;background:#fff;border:1px solid #e8eef4;border-radius:9px;padding:8px 10px;}
+.logitem{display:flex;gap:8px;align-items:flex-start;background:var(--surface);border:1px solid var(--brd2);border-radius:9px;padding:8px 10px;}
 .logitem .lmeta{font-size:10.5px;color:var(--text-light);white-space:nowrap;}
 .logitem .ltext{flex:1;font-size:13px;line-height:1.5;white-space:pre-wrap;}
 .glyph{font-weight:700;}
 .glyph.g{color:var(--green-dark);} .glyph.m{color:var(--amber);} .glyph.b{color:#7a8794;}
 .xbtn{background:none;border:none;color:#c0392b;cursor:pointer;font-size:18px;line-height:1;min-width:40px;min-height:40px;}
-.empty{font-size:12px;color:#9aa7b4;padding:4px 2px;}
+.empty{font-size:12px;color:var(--muted);padding:4px 2px;}
 
 /* ---- draft + linter ---- */
-.draftbox{border:1.5px solid #d4dde6;border-radius:10px;overflow:hidden;}
+.draftbox{border:1.5px solid var(--brd);border-radius:10px;overflow:hidden;}
 .draftbox textarea{border:none;border-radius:0;width:100%;padding:11px;font-size:16px;line-height:1.75;min-height:120px;resize:vertical;}
 .draftbox textarea:focus{outline:none;}
-.meter{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:7px 11px;background:#f6fafd;border-top:1px solid #e3edf6;font-size:11.5px;color:var(--text-light);}
+.meter{display:flex;flex-wrap:wrap;gap:9px;align-items:center;padding:7px 11px;background:var(--soft);border-top:1px solid var(--brd2);font-size:11.5px;color:var(--text-light);}
 .cnt{font-weight:700;}
 .cnt.ok{color:var(--ok);} .cnt.warn{color:var(--warn);} .cnt.over{color:var(--bad);}
 .chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px;}
@@ -118,40 +144,87 @@ input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
 /* ---- modal ---- */
 .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:100;padding:16px;}
 .modal-back.on{display:flex;}
-.modal{background:#fff;border-radius:14px;padding:18px;max-width:520px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,.25);}
+.modal{background:var(--surface);border-radius:14px;padding:18px;max-width:520px;width:100%;max-height:88vh;overflow:auto;box-shadow:0 8px 30px rgba(0,0,0,.25);}
 .modal h2{font-size:16px;margin:0 0 12px;color:var(--blue-dark);}
 .modal p{font-size:13.5px;line-height:1.6;white-space:pre-wrap;margin:0 0 14px;}
 .modal .mrow{display:flex;gap:8px;justify-content:flex-end;margin-top:14px;flex-wrap:wrap;}
 .modal label{display:block;font-size:12px;color:var(--text-light);margin:10px 0 4px;}
-.note{font-size:11.5px;color:var(--text-light);background:#f6fafd;border:1px solid #e3edf6;border-radius:9px;padding:9px 11px;line-height:1.55;}
+.note{font-size:11.5px;color:var(--text-light);background:var(--soft);border:1px solid var(--brd2);border-radius:9px;padding:9px 11px;line-height:1.55;}
 
 /* ---- 위계 평가 ---- */
-.lvrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 2px;border-bottom:1px dashed #e8eef4;}
+.lvrow{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:7px 2px;border-bottom:1px dashed var(--brd2);}
 .lvname{font-size:12.5px;font-weight:700;color:var(--blue-dark);min-width:90px;}
-select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background:#fff;max-width:100%;min-height:44px;}
+select.lvsel{padding:8px;border:1.5px solid var(--brd);border-radius:8px;background:var(--surface);max-width:100%;min-height:44px;}
 .lvsent{flex:1 1 100%;font-size:12.5px;line-height:1.55;}
-.lvhint{color:#9aa7b4;font-size:11.5px;}
-.itembox{border:1px solid #e3e9ef;border-radius:10px;padding:10px;margin-bottom:9px;background:#fbfdff;}
+.lvhint{color:var(--muted);font-size:11.5px;}
+.itembox{border:1px solid var(--brd3);border-radius:10px;padding:10px;margin-bottom:9px;background:var(--surface);}
 .itemhead{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
 .lvledit{display:flex;gap:7px;align-items:flex-start;margin-top:6px;}
 .lvbadge{color:#fff;font-weight:700;border-radius:7px;min-width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:12px;flex:none;margin-top:8px;}
 
 /* ---- 진행 현황 ---- */
-.modal.wide{max-width:880px;}
+.modal.wide{max-width:1100px;}
 .dashwrap{overflow-x:auto;margin:4px 0 10px;}
 .dtbl{border-collapse:collapse;width:100%;font-size:12.5px;}
-.dtbl th,.dtbl td{border:1px solid #e3e9ef;padding:6px 9px;text-align:center;vertical-align:middle;white-space:nowrap;}
+.dtbl th,.dtbl td{border:1px solid var(--brd3);padding:6px 9px;text-align:center;vertical-align:middle;white-space:nowrap;}
 .dtbl th{background:var(--blue-pastel);color:var(--blue-dark);font-size:12px;}
 .dtbl td.stu{text-align:left;font-weight:500;}
-.dtbl tr.sum td{background:#f6fafd;font-size:11.5px;color:var(--text-light);}
+.dtbl tr.sum td{background:var(--soft);font-size:11.5px;color:var(--text-light);}
 .dcell{cursor:pointer;}
-.dcell:hover{background:#f0f6fc;}
+.dcell:hover{background:var(--hover);}
 .dc-ok{color:var(--ok);font-weight:700;} .dc-warn{color:var(--warn);font-weight:700;} .dc-over{color:var(--bad);font-weight:700;}
 .dc-mat{color:#9a5a12;background:#fdeccf;border-radius:9px;padding:2px 8px;font-size:11px;}
 .dc-none{color:#c5ced6;}
+.bkrow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--divider);font-size:13px;}
+.bkrow:last-child{border-bottom:none;}
+/* 내용 보강(코칭) */
+.coach-q{margin-bottom:9px;}
+.coach-qtext{font-size:12.5px;font-weight:600;color:var(--text-main);margin-bottom:4px;line-height:1.5;}
+.pchips{display:flex;flex-wrap:wrap;gap:6px;}
+.pchip{font-size:12px;border:1.5px solid var(--brd);border-radius:14px;padding:4px 11px;cursor:pointer;background:var(--surface);color:var(--text-light);user-select:none;}
+.pchip.on{background:var(--green-dark);border-color:var(--green-dark);color:#fff;}
+/* 위계 항목 관리 — 성취기준 앵커 · 반간 재사용 */
+.bankrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:8px 11px;background:var(--soft);border:1px solid var(--brd2);border-radius:9px;}
+.bankrow select.cls{padding:6px 9px;}
+.itemanchor{margin:7px 0 2px;}
+.itemanchor input{font-size:13px;border-style:dashed;}
 
-.credit{text-align:center;font-size:11px;color:#888;padding:22px 0 6px;}
+.credit{text-align:center;font-size:10.5px;color:#888;padding:5px 0;background:var(--white);border-top:1px solid #e6ecf2;}
+
+/* ===== 학생 목록(master) / 편집(detail) 2-pane ===== */
+.stu-master{background:var(--white);border-radius:13px;box-shadow:0 1px 4px rgba(0,0,0,.06);display:flex;flex-direction:column;min-height:0;overflow:hidden;}
+.master-tools{padding:9px 9px 8px;border-bottom:1px solid var(--divider);}
+.stu-filter{width:100%;border:1.5px solid var(--brd);border-radius:9px;padding:8px 10px;font-size:15px;background:var(--surface);}
+.stu-filter:focus{outline:none;border-color:var(--blue-dark);}
+.stu-list{flex:1;min-height:0;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:5px;}
+.srow{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:10px;cursor:pointer;border:1.5px solid transparent;background:var(--soft);transition:background .1s;}
+.srow:hover{background:var(--hover);}
+.srow.selected{background:var(--sel);border-color:var(--blue-dark);}
+.srow .cname{font-weight:700;font-size:14.5px;}
+.srow .cdots{margin-left:auto;}
+
+.stu-detail{min-height:0;overflow-y:auto;}
+.detail-inner{background:var(--white);border-radius:13px;box-shadow:0 1px 4px rgba(0,0,0,.06);padding:14px 16px 22px;max-width:1240px;}
+.detail-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:10px;border-bottom:2px solid var(--blue-dark);}
+.detail-head .back{display:none;}
+.detail-empty{height:100%;min-height:240px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:14px;line-height:1.9;padding:20px;}
+@media(max-width:1023px){ .detail-head .back{display:inline-flex;} }
+
+/* 편집: 중(작성) · 우(기재요령·검증) — 넓은 화면에서 3-pane 완성 */
+.editor-grid{display:grid;gap:16px;grid-template-columns:1fr;align-items:start;}
+@media(min-width:1280px){ .editor-grid{grid-template-columns:minmax(0,1fr) 300px;} }
+.editor-ref{display:flex;flex-direction:column;gap:11px;}
+@media(min-width:1280px){ .editor-ref{position:sticky;top:2px;} }
+.ref-card{background:var(--soft);border:1px solid var(--brd2);border-radius:11px;padding:11px 13px;}
+.ref-title{font-size:12.5px;font-weight:700;color:var(--blue-dark);margin-bottom:7px;}
+.ref-hint{font-size:12px;line-height:1.7;color:var(--text-light);}
+.editor-ref .chips{margin-top:0;}
+
 .hidden{display:none!important;}
+.robanner{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:#c0392b;color:#fff;font-size:12.5px;font-weight:600;padding:8px 16px;padding-top:calc(8px + env(safe-area-inset-top));z-index:7;}
+.robanner b{text-decoration:underline;}
+.robanner .btn{flex:none;background:#fff;color:#c0392b;border:none;font-weight:700;}
+body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역만 잠금 — 상단바 백업/현황 등 도구는 그대로 */
 @media (max-width:480px){
   .genrow .btn{min-width:100%;}
   h1{font-size:17px;}
@@ -159,7 +232,12 @@ select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background
 </style>
 </head>
 <body>
-<div class="container">
+<div class="app">
+
+  <div class="robanner hidden" id="roBanner">
+    <span>🔒 이 데이터는 더 새로운 버전에서 작성되었습니다. 손상을 막기 위해 <b>읽기 전용</b>으로 열었습니다(편집이 저장되지 않습니다).</span>
+    <button class="btn sm" onclick="exportJSON()">⬇ 백업만 내려받기</button>
+  </div>
 
   <div class="topbar">
     <div class="row">
@@ -168,6 +246,8 @@ select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background
         <div class="sub">담임 행특·창체 + 교과 세특을 한 학생 카드에서 · 오프라인 보관(이 기기)</div>
       </div>
       <div class="spacer"></div>
+      <button class="iconbtn hidden" id="saveWarn" style="border-color:var(--red-accent);color:var(--red-accent);font-weight:700;" onclick="exportJSON()" title="저장 공간 부족 — 지금 파일로 백업하세요">⚠ 저장 안 됨 · 백업</button>
+      <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="밝게/어둡게">🌙</button>
       <button class="iconbtn" onclick="openDash()">📊 현황</button>
       <button class="iconbtn" onclick="openSettings()">⚙️ 설정</button>
       <span class="savestat" id="saveStat"></span>
@@ -183,12 +263,23 @@ select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background
       <button class="iconbtn" onclick="exportJSON()">⬇ 백업</button>
       <button class="iconbtn" onclick="document.getElementById('mergeFile').click()">➕ 병합</button>
       <button class="iconbtn" onclick="document.getElementById('importFile').click()">⬆ 복원</button>
+      <button class="iconbtn" onclick="openBackups()">⏱ 자동백업</button>
       <input type="file" id="mergeFile" accept="application/json" class="hidden" onchange="mergeJSON(event)">
       <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importJSON(event)">
     </div>
   </div>
 
-  <div id="students"></div>
+  <div class="main">
+    <div class="workspace" id="workspace">
+      <aside class="stu-master">
+        <div class="master-tools">
+          <input class="stu-filter" id="stuFilter" type="text" placeholder="🔍 학생 검색 (이름·번호)" oninput="onStuFilter(this.value)">
+        </div>
+        <div class="stu-list" id="students"></div>
+      </aside>
+      <section class="stu-detail" id="stuDetail"></section>
+    </div>
+  </div>
 
   <div class="credit">Claude AI로 이 앱을 제작함 by 고은표</div>
 </div>
@@ -234,7 +325,7 @@ select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background
 <div class="modal-back" id="itemsBack">
   <div class="modal wide">
     <h2 id="itemsTitle"></h2>
-    <div class="note" style="margin-bottom:10px;">항목 = 수행평가·관찰 영역 단위. <b>[자동 생성]</b>은 항목명에 맞는 위계 1~10 기본 문장을 만들며, 각 문장은 직접 수정할 수 있습니다. 이 설정은 <b>현재 반 전체 공용</b>이고, 학생 카드에서는 항목별 수준(1~10)만 고르면 됩니다.</div>
+    <div class="note" style="margin-bottom:10px;">항목 = 수행평가·관찰 영역 단위. <b>[자동 생성]</b>은 항목명에 맞는 위계 1~10 기본 문장을 만들며, 각 문장은 직접 수정할 수 있습니다. <b>🔗 성취기준·단원</b>을 연결하면 초안이 그 도달 과정 중심으로 쓰이고(생명과학은 코드 자동완성), <b>다른 반에서 만든 항목을 그대로 가져와</b> 재사용할 수 있습니다. 이 설정은 <b>현재 반 전체 공용</b>이고, 학생 카드에서는 항목별 수준(1~10)만 고르면 됩니다.</div>
     <div id="itemsBody"></div>
     <div class="mrow">
       <button class="btn ghost" onclick="addItem()">＋ 항목 추가</button>
@@ -251,6 +342,18 @@ select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background
     <div class="note">숫자=초안 글자수(<span class="dc-ok">여유</span>·<span class="dc-warn">한도 임박</span>·<span class="dc-over">초과</span>) · <span class="dc-mat">재료</span>=누가기록/참고자료/위계만 있음 · — =미착수 · <b>셀을 누르면 해당 학생·영역으로 이동</b></div>
     <div class="mrow">
       <button class="btn gray" onclick="closeDash()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<!-- 자동백업 modal -->
+<div class="modal-back" id="bkBack">
+  <div class="modal">
+    <h2>⏱ 자동 백업 (이 기기)</h2>
+    <div class="note" style="margin-bottom:10px;">앱을 하루 한 번 열 때마다 <b>이 기기에</b> 자동 저장됩니다(최근 7개 보관, API 키 제외). 실수로 지웠을 때 되돌리거나 파일로 내려받을 수 있습니다.</div>
+    <div id="bkBody"></div>
+    <div class="mrow">
+      <button class="btn gray" onclick="closeBackups()">닫기</button>
     </div>
   </div>
 </div>
@@ -272,21 +375,43 @@ select.lvsel{padding:8px;border:1.5px solid #d4dde6;border-radius:8px;background
    ============================================================ */
 
 const STORE_KEY = "saengbuTonghap_v1";
+const BK_KEY = "saengbuTonghap_autobk";   // 자동백업(이 기기, 최근 7개 롤링)
+const SCHEMA = 1;          // 데이터 스키마 버전. 더 새 버전이 쓴 데이터를 구 버전으로 열면 읽기전용으로 잠근다.
+let _readOnly = false;     // true면 save()가 no-op — 신 버전 데이터를 구 코드가 덮어써 망가뜨리는 사고를 막는다.
 
 const AREAS = [
   { k:'subject',  t:'교과 세부능력 및 특기사항', short:'교과세특', limit:500, color:'green'  },
   { k:'homeroom', t:'행동특성 및 종합의견', short:'행특',     limit:300, color:'amber'  },
-  { k:'autonomy', t:'자율활동',            short:'자율',     limit:500, color:'blue'   },
+  { k:'autonomy', t:'자율·자치활동',        short:'자율',     limit:500, color:'blue'   },   // ★데이터 키 autonomy는 불변(백업 호환)
   { k:'career',   t:'진로활동',            short:'진로',     limit:500, color:'blue'   },
   { k:'club',     t:'동아리활동',          short:'동아리',   limit:500, color:'green'  },
 ];
 const AREA_HINT = {
   subject:  '해당 교과 수업에서 성취기준 도달 과정과 탐구·활동 참여를 학생 개인의 성취과정·성취특성이 드러나게 서술. 수업 활동의 단순 나열이나 성취수준에 이미 명시된 지식의 단순 서술은 지양.',
   homeroom: '수시 관찰에 근거해 학생을 총체적으로 이해할 수 있는 종합의견. 학습·인성·태도·성장의 구체적 행동 근거 중심으로 서술.',
-  autonomy: '자율활동에서 드러난 학생의 개별적 특성·역할·기여가 드러나게 서술. 단순 행사 참여 나열은 지양.',
+  autonomy: '자율·자치활동에서 드러난 학생의 개별적 특성·역할·기여가 드러나게 서술. 단순 행사 참여 나열은 지양.',
   career:   '진로 탐색·활동에서 드러난 관심·노력·성장 과정을 서술. (진로희망 분야는 별도 칸에 적으며, 본문에서 특정 진로를 단정 짓지 않음.)',
   club:     '동아리 활동에서 학생의 역할·기여·탐구 과정이 드러나게 서술.',
 };
+/* 성취기준 앵커 — 항목을 교육과정에 걸어 위계를 체계화. 생명과학은 코드 자동완성 제공(그 외 과목은 자유입력) */
+const ACHIEVEMENT = {
+  '생명과학': [
+    '12생과01-01 생명과학의 이해·탐구 방법','12생과01-02 생명의 구성 단계','12생과01-03 물질대사와 에너지',
+    '12생과01-04 기관계의 통합 작용','12생과01-05 생태계 구성과 상호작용','12생과01-06 개체군','12생과01-07 군집',
+    '12생과02-01 뉴런의 구조와 흥분 전도','12생과02-02 흥분의 전도와 시냅스 전달','12생과02-03 사람의 신경계',
+    '12생과02-04 내분비계와 호르몬','12생과02-05 항상성 유지','12생과02-06 방어작용(면역)','12생과02-07 백신·항원항체 반응',
+    '12생과03-01 염색체·DNA·유전자','12생과03-02 생식세포 형성과 유전적 다양성','12생과03-03 진화와 자연선택',
+    '12생과03-04 생물의 분류 체계','12생과03-05 계통수',
+  ],
+};
+function achvOptionsHTML(){
+  const subj = subjName();
+  const key = Object.keys(ACHIEVEMENT).find(k=> subj.includes(k));
+  return (key ? ACHIEVEMENT[key] : []).map(v=>`<option value="${esc(v)}">`).join('');
+}
+function bankCandidates(ak){
+  return Object.keys(state.classes).filter(n=> n!==state.current && (((state.classes[n]||{}).items||{})[ak]||[]).length>0);
+}
 const STATES = ["g","m","b"];
 const GLYPH  = { g:"◎", m:"○", b:"–" };
 const IMPLBL = { g:"인상적", m:"보통", b:"아쉬움" };
@@ -424,27 +549,73 @@ function normalizeState(){
     ensureItems(c);
     Object.values(c.students).forEach(s=> ensureAreas(s)); });
 }
+/* 항목 1개를 안전한 형태로 되돌린다(멱등).
+   백업 파일·다른 앱 링크로 들어온 항목은 형태가 깨져 있을 수 있는데,
+   sentences가 배열이 아니면 위계 화면이 통째로 죽어 학생 카드가 안 열린다. */
+function normItem(it){
+  if(!it || typeof it!=='object') return null;
+  if(!it.id) it.id = newItemId();
+  if(typeof it.name  !== 'string') it.name  = '';
+  if(typeof it.anchor!== 'string') it.anchor= '';
+  if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
+  else {
+    it.sentences = it.sentences.slice(0,10).map(s=> typeof s==='string' ? s : '');
+    while(it.sentences.length < 10) it.sentences.push('');
+  }
+  return it;
+}
 function ensureItems(c){
   if(!c.items) c.items = {};
-  AREAS.forEach(a=>{ if(!Array.isArray(c.items[a.k])) c.items[a.k] = []; });
+  AREAS.forEach(a=>{
+    if(!Array.isArray(c.items[a.k])) c.items[a.k] = [];
+    c.items[a.k] = c.items[a.k].map(normItem).filter(Boolean);   // 깨진 항목은 여기서 전부 걸러진다
+  });
 }
 function load(){
   try{ const s = JSON.parse(localStorage.getItem(STORE_KEY)); if(s && s.classes) state = s; }catch(e){}
+  _readOnly = ((state.schema|0) > SCHEMA);        // 더 새 버전이 쓴 데이터 → 덮어쓰기 금지
+  const wasOlder = ((state.schema|0) < SCHEMA);   // 구 스키마(무버전 포함) → 전환 직전 1회 고정 스냅샷
   normalizeState();
+  if(!_readOnly){
+    if(wasOlder && state.classes && Object.keys(state.classes).length)
+      autoBackup(true, '스키마 전환 직전(고정 백업)', true /*pin*/);   // 롤링에서 밀려나지 않게 pin
+    state.schema = SCHEMA;
+    save();   // 스탬프를 즉시 영속화 → 다음 부팅에 pin이 다시 찍히지 않는다
+  }
 }
 function ensureAreas(s){
   if(!s.areas) s.areas = {};
   AREAS.forEach(a=>{
     if(!s.areas[a.k]) s.areas[a.k] = { logs:[], paste:"", draft:"" };
     if(!s.areas[a.k].levels || typeof s.areas[a.k].levels!=='object') s.areas[a.k].levels = {};
+    if(!s.areas[a.k].coach || typeof s.areas[a.k].coach!=='object') s.areas[a.k].coach = { q:[], phr:[] };
+    // ev=활동별 '이 학생만의 장면', pre=일괄 채움된 미확인 값. 구버전이 모르는 키라 백업 왕복에도 살아남는다.
+    if(!s.areas[a.k].ev  || typeof s.areas[a.k].ev !=='object') s.areas[a.k].ev  = {};
+    if(!s.areas[a.k].pre || typeof s.areas[a.k].pre!=='object') s.areas[a.k].pre = {};
   });
   if(s.areas.career.hope == null) s.areas.career.hope = "";
   if(s.areas.club.clubName == null) s.areas.club.clubName = "";
 }
 let _savet;
+let _saveWarned = false;
 function save(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(state)); flashSaved(); }
-  catch(e){ document.getElementById('saveStat').textContent = "저장 공간 부족!"; }
+  if(_readOnly) return true;   // 더 새 버전 데이터 — 읽기 전용. 덮어쓰지 않되 호출부 흐름은 정상으로 둔다.
+  // 성공/실패를 반환한다 — 부르는 쪽이 '완료' 알림을 띄우기 전에 반드시 확인할 것.
+  try{
+    localStorage.setItem(STORE_KEY, JSON.stringify(state)); flashSaved();
+    if(_saveWarned){ _saveWarned = false; const b=document.getElementById('saveWarn'); if(b) b.classList.add('hidden'); }
+    return true;
+  }
+  catch(e){
+    document.getElementById('saveStat').textContent = "⚠ 저장 실패";
+    const b = document.getElementById('saveWarn'); if(b) b.classList.remove('hidden');
+    // 저장이 안 되는 줄 모르고 계속 작업하면 새로고침 순간 전부 사라진다 → 한 번은 반드시 막아 세운다.
+    if(!_saveWarned){
+      _saveWarned = true;
+      confirmModal('저장 공간이 부족해 이 기기에 저장하지 못했습니다.\n\n지금 [⬇ 백업]으로 파일을 내려받은 뒤 계속하세요.\n(내려받지 않고 새로고침하면 저장되지 않은 내용이 사라집니다.)', true, ()=>exportJSON());
+    }
+    return false;
+  }
 }
 function saveSoon(){ clearTimeout(_savet); _savet = setTimeout(save, 350); }
 function flashSaved(){
@@ -518,45 +689,107 @@ function applyRoster(){
   const doApply = ()=>{ cur().students = next; save(); closeRoster(); renderStudents(); };
   if(removed.length){
     const names = removed.map(no=>`${no} ${old[no].name||''}`.trim()).join(', ');
-    confirmModal(`명단에서 빠진 학생 ${removed.length}명의 모든 기록(누가기록·초안)도 함께 삭제됩니다.\n삭제: ${names}\n\n진행할까요?`, true, doApply);
+    confirmModal(`명단에서 빠진 학생 ${removed.length}명의 모든 기록이 함께 삭제됩니다.\n누가기록·참고자료·초안·위계 수준 선택·보강 문답이 전부 사라지며 되돌릴 수 없습니다.\n삭제: ${names}\n\n진행할까요?`, true, ()=>{
+      // 되돌릴 지점부터 남긴다. 스냅샷을 못 만들면 삭제를 진행하지 않는다.
+      if(!autoBackup(true, '명단 재적용 직전')){
+        alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
+        return;
+      }
+      doApply();
+    });
   } else doApply();
 }
 
 /* ---------------- render ---------------- */
-function renderAll(){ renderClassSel(); syncSubjInput(); renderStudents(); }
-function renderStudents(){
+function renderReadOnly(){
+  const b = document.getElementById('roBanner'); if(b) b.classList.toggle('hidden', !_readOnly);
+  document.body.classList.toggle('readonly', _readOnly);   // CSS로 편집 영역 비활성(백업 버튼 등 도구는 유지)
+}
+function renderAll(){ renderReadOnly(); renderClassSel(); syncSubjInput(); renderStudents(); }
+let _stuFilter = '';
+function onStuFilter(v){ _stuFilter = (v||'').trim(); renderMaster(); }
+function renderStudents(){ renderMaster(); renderDetail(); }
+function renderMaster(){
   const box = document.getElementById('students');
   const students = cur().students;
   const nos = Object.keys(students).map(Number).sort((a,b)=>a-b);
   if(nos.length === 0){
-    box.innerHTML = `<div class="card"><div class="cbody" style="display:block;padding:24px 16px;text-align:center;color:#9aa7b4;">
-      아직 학생이 없습니다. 위 <b>📋 명단</b>으로 우리 반 명단을 붙여넣어 주세요.</div></div>`;
+    box.innerHTML = `<div class="empty" style="padding:22px 12px;text-align:center;line-height:1.7;">아직 학생이 없습니다.<br>위 <b>📋 명단</b>으로<br>우리 반 명단을 붙여넣어 주세요.</div>`;
     return;
   }
-  box.innerHTML = nos.map(no=> cardHTML(no)).join("");
-  if(openNo!=null){
-    const el = document.querySelector(`.card[data-no="${openNo}"]`);
-    if(el) requestAnimationFrame(()=>{ bindPanel(openNo); });
-  }
+  const f = _stuFilter;
+  const shown = f ? nos.filter(no=> (no+' '+(students[no].name||'')).includes(f)) : nos;
+  box.innerHTML = shown.length
+    ? shown.map(no=> rowHTML(no)).join("")
+    : `<div class="empty" style="padding:16px 10px;text-align:center;">'${esc(f)}' 검색 결과가 없습니다.</div>`;
+  if(openNo!=null){ const r = box.querySelector(`.srow[data-no="${openNo}"]`); if(r) r.scrollIntoView({block:'nearest'}); }
 }
+function rowHTML(no){
+  const s = stu(no);
+  return `<div class="srow ${no===openNo?'selected':''}" data-no="${no}" onclick="selectStudent(${no})">
+    <span class="cno">${no}</span>
+    <span class="cname">${esc(s.name)}</span>
+    ${dotsHTML(s)}
+  </div>`;
+}
+function renderDetail(){
+  const pane = document.getElementById('stuDetail');
+  const ws = document.getElementById('workspace');
+  const students = cur().students;
+  const has = (openNo!=null && students[openNo]);
+  if(ws) ws.classList.toggle('has-sel', !!has);
+  if(!has){
+    pane.innerHTML = `<div class="detail-empty">← 왼쪽 목록에서 학생을 선택하면<br>여기에서 5개 영역(교과세특·행특·자율·진로·동아리)을 작성합니다.</div>`;
+    return;
+  }
+  const s = stu(openNo);
+  // 2차 방어 — 항목 형태가 깨지면 예전엔 여기서 조용히 멈춰 학생을 눌러도 편집창이 안 열렸다(벽돌).
+  // normItem이 원인을 없앴지만, 다른 형태의 손상에도 화면만은 반드시 뜨게 한다.
+  try{
+    pane.innerHTML = `<div class="detail-inner">
+      <div class="detail-head">
+        <button class="btn ghost sm back" onclick="backToList()">← 목록</button>
+        <span class="cno">${openNo}</span>
+        <span class="cname" style="font-size:16.5px;">${esc(s.name)}</span>
+      </div>
+      ${panelHTML(openNo)}
+    </div>`;
+    requestAnimationFrame(()=>{ bindPanel(openNo); });
+  }catch(err){
+    console.error('renderDetail 실패', err);
+    pane.innerHTML = `<div class="detail-inner">
+      <div class="detail-head">
+        <button class="btn ghost sm back" onclick="backToList()">← 목록</button>
+        <span class="cno">${openNo}</span>
+        <span class="cname" style="font-size:16.5px;">${esc(s.name)}</span>
+      </div>
+      <div class="note" style="border-color:var(--red-accent);color:var(--bad);line-height:1.7;">
+        ⚠ 이 반의 위계 항목이 손상되어 편집 화면을 열지 못했습니다.<br>
+        아래에서 항목을 확인·수정하거나, 최근 자동백업으로 되돌릴 수 있습니다.<br>
+        <span style="color:var(--text-light);font-size:11px;">${esc((err&&err.message)||'')}</span>
+      </div>
+      <div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap;">
+        <button class="btn ghost sm" onclick="openItems('${openArea}')">⚙ 항목 관리 열기</button>
+        <button class="btn ghost sm" onclick="openBackups()">⏱ 자동백업 복원</button>
+        <button class="btn ghost sm" onclick="exportJSON()">⬇ 백업 내려받기</button>
+      </div>
+    </div>`;
+  }
+  pane.scrollTop = 0;
+}
+function selectStudent(no){
+  _newImp[no] = null;
+  openNo = no;
+  renderStudents();
+}
+function backToList(){ openNo = null; renderStudents(); }
 function dotsHTML(s){
   return `<div class="cdots">${AREAS.map(a=>{
     const ar = s.areas[a.k]; const has = (ar.draft && ar.draft.trim()) || (ar.logs && ar.logs.length) || Object.values(ar.levels||{}).some(v=>v);
     return `<span class="cdot ${has?'has':''}" title="${a.short}"></span>`;
   }).join("")}</div>`;
 }
-function cardHTML(no){
-  const s = stu(no); const isOpen = (no===openNo);
-  return `<div class="card ${isOpen?'open':''}" data-no="${no}">
-    <div class="chead" onclick="toggleOpen(${no})">
-      <span class="cno">${no}</span>
-      <span class="cname">${esc(s.name)}</span>
-      ${dotsHTML(s)}
-      <span class="chev">▼</span>
-    </div>
-    <div class="cbody">${isOpen ? panelHTML(no) : ''}</div>
-  </div>`;
-}
+/* (구 아코디언 카드 렌더러 제거 — master-detail rowHTML/renderDetail로 대체) */
 function panelHTML(no){
   const s = stu(no);
   const tabs = `<div class="tabs">${AREAS.map(a=>{
@@ -564,7 +797,22 @@ function panelHTML(no){
     const lbl = a.k==='subject' ? (subjName()||'교과세특') : a.short;
     return `<button class="tab ${a.k===openArea?'on '+a.color:''}" onclick="setArea(${no},'${a.k}')">${esc(lbl)}${has?'<span class="tdot"></span>':''}</button>`;
   }).join("")}</div>`;
-  return tabs + areaPanel(no, openArea);
+  return tabs + `<div class="editor-grid">
+    <div class="editor-main">${areaPanel(no, openArea)}</div>
+    <aside class="editor-ref">${refPanel(no, openArea)}</aside>
+  </div>`;
+}
+function refPanel(no, ak){
+  const a = AREAS.find(x=>x.k===ak);
+  const lbl = ak==='subject' ? (subjName()||'교과세특') : a.short;
+  return `<div class="ref-card">
+      <div class="ref-title">📏 ${esc(lbl)} · 최대 ${a.limit}자</div>
+      <div class="ref-hint">${esc(AREA_HINT[ak]||'')}</div>
+    </div>
+    <div class="ref-card">
+      <div class="ref-title">🔎 실시간 검증</div>
+      <div class="chips" id="lint-${no}"><span class="chip good" style="opacity:.5">초안을 입력하면 자동 검사합니다.</span></div>
+    </div>`;
 }
 function areaTitleOf(ak, a){
   if(ak==='subject') return subjName() ? subjName()+' 세부능력 및 특기사항' : '교과 세부능력 및 특기사항';
@@ -606,6 +854,15 @@ function areaPanel(no, ak){
   </div>
 
   <div class="sec">
+    <h3>🤔 내용 보강 <span class="hint">질문에 답하면 초안 재료가 됩니다</span></h3>
+    <div class="genrow">
+      <button class="btn ghost" id="coachBtn-${no}" onclick="genCoach(${no},'${ak}')">🤔 보강 질문 받기</button>
+    </div>
+    <div class="genmsg" id="coachMsg-${no}"></div>
+    <div id="coachBox-${no}">${coachBoxHTML(no, ak)}</div>
+  </div>
+
+  <div class="sec">
     <h3>✨ ${esc(aTitle)} 초안</h3>
     <div class="genrow">
       <button class="btn ${a.color==='green'?'green':a.color==='amber'?'amber':''}" id="genBtn-${no}" onclick="generate(${no},'${ak}')">🤖 AI 초안 생성</button>
@@ -617,7 +874,6 @@ function areaPanel(no, ak){
         oninput="onDraft(${no},'${ak}')">${esc(ar.draft||'')}</textarea>
       <div class="meter" id="meter-${no}"></div>
     </div>
-    <div class="chips" id="lint-${no}"></div>
     <div style="margin-top:9px;display:flex;gap:7px;">
       <button class="btn ghost sm" onclick="copyDraft(${no})">📄 문구 복사</button>
     </div>
@@ -667,17 +923,7 @@ function logListHTML(no, ak){
 }
 
 /* ---------------- interactions ---------------- */
-function toggleOpen(no){
-  _newImp[no] = null;
-  openNo = (openNo===no) ? null : no;
-  openArea = 'subject';
-  renderStudents();
-  if(openNo===no){
-    const el = document.querySelector(`.card[data-no="${no}"]`);
-    if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
-  }
-}
-function setArea(no, ak){ _newImp[no] = null; openArea = ak; renderStudents(); }
+function setArea(no, ak){ _newImp[no] = null; openArea = ak; renderDetail(); }
 function bindPanel(no){ refreshMeter(no, openArea); }
 
 let _newImp = {};
@@ -760,57 +1006,116 @@ function renderItemsModal(){
   const a = AREAS.find(x=>x.k===ak);
   document.getElementById('itemsTitle').textContent = `📐 위계 항목 관리 — ${areaTitleOf(ak, a)}`;
   const items = itemsFor(ak);
-  document.getElementById('itemsBody').innerHTML = items.length===0
+  const cands = bankCandidates(ak);
+  const bank = cands.length ? `<div class="bankrow">
+      <span class="lvhint">다른 반에서 만든 항목 재사용:</span>
+      <select id="itemSrcSel" class="cls" style="font-weight:500;">
+        ${cands.map(n=>`<option value="${esc(n)}">${esc(n)} (${(state.classes[n].items[ak]||[]).length}개)</option>`).join('')}
+      </select>
+      <button class="btn ghost sm" onclick="importItemsFromSel()">📋 가져오기</button>
+    </div>` : '';
+  const dl = `<datalist id="achvList">${achvOptionsHTML()}</datalist>`;
+  // ★핸들러는 전부 항목 id 기준. 위치 인덱스를 쓰면 목록 순서가 바뀌는 순간
+  //   '삭제'가 엉뚱한 항목을 지우고 반 전체 학생의 수준 선택이 함께 날아간다.
+  const body = items.length===0
     ? `<div class="empty">항목이 없습니다. 아래 <b>[＋ 항목 추가]</b>로 시작하세요. (예: '3D 세포 모형 만들기' 수행평가, '교우관계' 관찰 영역)</div>`
-    : items.map((it,i)=>`
+    : items.map(it=>`
       <div class="itembox">
         <div class="itemhead">
-          <input class="txt" style="flex:1;min-width:150px;" value="${esc(it.name)}" placeholder="항목명 (예: 유전 원리 탐구, 교우관계)" oninput="onItemName(${i},this.value)">
-          <button class="btn green sm" onclick="autoFillItem(${i})">자동 생성</button>
-          <button class="btn ghost sm" onclick="toggleItemEdit(${i})">위계 문장 <span id="itoggle-${i}">▼</span></button>
-          <button class="xbtn" onclick="delItem(${i})" title="항목 삭제">✕</button>
+          <input class="txt" style="flex:1;min-width:150px;" value="${esc(it.name)}" placeholder="항목명 (예: 유전 원리 탐구, 교우관계)" oninput="onItemName('${it.id}',this.value)">
+          <button class="btn green sm" onclick="autoFillItem('${it.id}')">자동 생성</button>
+          <button class="btn ghost sm" onclick="toggleItemEdit('${it.id}')">위계 문장 <span id="itoggle-${it.id}">▼</span></button>
+          <button class="xbtn" onclick="delItem('${it.id}')" title="항목 삭제">✕</button>
         </div>
-        <div class="itembody hidden" id="ibody-${i}">
-          ${it.sentences.map((s,lv)=>`
+        <div class="itemanchor">
+          <input class="txt" list="achvList" value="${esc(it.anchor||'')}" placeholder="🔗 성취기준·단원 연결 (선택 · 예: 12생과02-04 내분비계와 호르몬)" oninput="onItemAnchor('${it.id}',this.value)">
+        </div>
+        <div class="itembody hidden" id="ibody-${it.id}">
+          ${Array.from({length:10},(_,lv)=>`
             <div class="lvledit">
               <span class="lvbadge" style="background:${LV_COLORS[lv]}">${lv+1}</span>
-              <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent(${i},${lv},this.value)">${esc(s)}</textarea>
+              <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent('${it.id}',${lv},this.value)">${esc(it.sentences[lv]||'')}</textarea>
             </div>`).join('')}
         </div>
       </div>`).join('');
+  document.getElementById('itemsBody').innerHTML = dl + bank + body;
 }
 function addItem(){
-  itemsFor(_itemsArea).push({ id:newItemId(), name:'', sentences:Array(10).fill('') });
+  itemsFor(_itemsArea).push({ id:newItemId(), name:'', anchor:'', sentences:Array(10).fill('') });
   save(); renderItemsModal();
 }
-function delItem(i){
-  const items = itemsFor(_itemsArea); const it = items[i]; if(!it) return;
-  confirmModal(`'${it.name||('항목 '+(i+1))}' 항목을 삭제합니다.\n학생별로 선택해 둔 이 항목의 수준도 함께 지워집니다. 진행할까요?`, true, ()=>{
-    items.splice(i,1);
+function itemById(id){ return itemsFor(_itemsArea).find(x=>x && x.id===id) || null; }
+/* 이 항목의 수준을 실제로 골라 둔 학생 수 — 삭제 확인 모달에 보여 주기 위한 것 */
+function itemUsageCount(id){
+  return Object.values(cur().students).filter(s=>{
+    const lv = s.areas && s.areas[_itemsArea] && s.areas[_itemsArea].levels;
+    return lv && lv[id];
+  }).length;
+}
+function onItemAnchor(id, v){ const it=itemById(id); if(it){ it.anchor = v; saveSoon(); } }
+function importItemsFromSel(){
+  const ak=_itemsArea; const sel=document.getElementById('itemSrcSel');
+  if(!sel || !sel.value) return;
+  const src=state.classes[sel.value]; const srcItems=((src&&src.items)||{})[ak]||[];
+  if(srcItems.length===0){ alert('가져올 항목이 없습니다.'); return; }
+  // 같은 항목을 두 번 가져와 목록이 불어나는 것을 막는다(항목명+성취기준이 같으면 이미 있는 것으로 본다).
+  const dst = itemsFor(ak);
+  const key = it => (it.name||'').trim() + ' ' + (it.anchor||'').trim();
+  const have = new Set(dst.map(key));
+  const fresh = srcItems.filter(it=> !have.has(key(it)));
+  const skip = srcItems.length - fresh.length;
+  if(fresh.length===0){ alert(`'${sel.value}'의 항목 ${srcItems.length}개는 이미 모두 있습니다. 가져오지 않았습니다.`); return; }
+  confirmModal(`'${sel.value}'의 위계 항목 ${fresh.length}개를 현재 반으로 복사합니다.`
+    + (skip ? `\n(이미 있는 ${skip}개는 건너뜁니다)` : '')
+    + `\n(항목명·성취기준·위계 문장만 복사되고, 학생별 수준 선택은 각자 새로 고릅니다.)\n진행할까요?`, false, ()=>{
+    fresh.forEach(it=> dst.push({ id:newItemId(), name:it.name||'', anchor:it.anchor||'',
+      sentences: Array.isArray(it.sentences) ? it.sentences.slice(0,10) : Array(10).fill('') }));
+    save(); renderItemsModal();
+    alert(`${fresh.length}개 가져옴` + (skip ? ` · ${skip}개 건너뜀(이미 있음)` : ''));
+  });
+}
+function delItem(id){
+  const items = itemsFor(_itemsArea);
+  const k = items.findIndex(x=> x && x.id===id); if(k<0) return;
+  const it = items[k];
+  const used = itemUsageCount(id);
+  confirmModal(`'${it.name||'이름 없는 항목'}' 항목을 삭제합니다.`
+    + (used ? `\n이 항목의 수준을 골라 둔 학생 ${used}명의 선택도 함께 지워집니다.` : `\n(아직 이 항목의 수준을 고른 학생은 없습니다.)`)
+    + `\n되돌릴 수 없습니다. 진행할까요?`, true, ()=>{
+    if(used && !autoBackup(true, '항목 삭제 직전')){
+      alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
+      return;
+    }
+    items.splice(k,1);
     Object.values(cur().students).forEach(s=>{
-      const lv = s.areas && s.areas[_itemsArea] && s.areas[_itemsArea].levels;
-      if(lv) delete lv[it.id];
+      const ar = s.areas && s.areas[_itemsArea];
+      if(ar && ar.levels) delete ar.levels[id];
+      if(ar && ar.pre) delete ar.pre[id];
     });
     save(); renderItemsModal();
   });
 }
-function onItemName(i, v){ itemsFor(_itemsArea)[i].name = v; saveSoon(); }
-function onItemSent(i, lv, v){ itemsFor(_itemsArea)[i].sentences[lv] = v; saveSoon(); }
-function toggleItemEdit(i){
-  const b = document.getElementById('ibody-'+i); if(!b) return;
+function onItemName(id, v){ const it=itemById(id); if(it){ it.name = v; saveSoon(); } }
+function onItemSent(id, lv, v){
+  const it=itemById(id); if(!it) return;
+  if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
+  it.sentences[lv] = v; saveSoon();
+}
+function toggleItemEdit(id){
+  const b = document.getElementById('ibody-'+id); if(!b) return;
   b.classList.toggle('hidden');
-  const t = document.getElementById('itoggle-'+i);
+  const t = document.getElementById('itoggle-'+id);
   if(t) t.textContent = b.classList.contains('hidden') ? '▼' : '▲';
 }
-function autoFillItem(i){
-  const it = itemsFor(_itemsArea)[i]; if(!it) return;
+function autoFillItem(id){
+  const it = itemById(id); if(!it) return;
   const name = (it.name||'').trim();
   if(!name){ alert('항목명을 먼저 입력하세요.'); return; }
   const doFill = ()=>{
     it.sentences = templatesFor(_itemsArea, name).map(fn=>fn(name));
     save(); renderItemsModal();
-    const b = document.getElementById('ibody-'+i); if(b) b.classList.remove('hidden');
-    const t = document.getElementById('itoggle-'+i); if(t) t.textContent='▲';
+    const b = document.getElementById('ibody-'+id); if(b) b.classList.remove('hidden');
+    const t = document.getElementById('itoggle-'+id); if(t) t.textContent='▲';
   };
   if(it.sentences.some(s=>s && s.trim())){
     confirmModal('이미 입력된 위계 문장을 기본 문장으로 덮어씁니다.\n진행할까요?', true, doFill);
@@ -857,8 +1162,6 @@ function dashGo(no, ak){
   closeDash();
   _newImp[no] = null; openNo = no; openArea = ak;
   renderStudents();
-  const el = document.querySelector(`.card[data-no="${no}"]`);
-  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 function onDraft(no, ak){
   const v = document.getElementById('draft-'+no).value;
@@ -949,7 +1252,7 @@ function refreshMeter(no, ak){
   STYLE_MAP.forEach(([w,tip])=>{ if(txt.includes(w)) chips.push(`<span class="chip tip">💡 '${w}' → ${esc(tip)}</span>`); });
 
   if(txt.trim() && chips.length===0) chips.push(`<span class="chip good">✅ 자동검사 통과</span>`);
-  lint.innerHTML = chips.join("");
+  lint.innerHTML = chips.length ? chips.join("") : '<span class="chip good" style="opacity:.5">초안을 입력하면 자동 검사합니다.</span>';
 }
 
 /* ---------------- AI prompt + API ---------------- */
@@ -990,11 +1293,18 @@ function buildUserPrompt(no, ak){
   if(ak==='subject' && subjName()) head += `\n[과목] ${subjName()}`;
   if(ak==='career' && ar.hope) head += `\n[학생 진로 희망분야] ${ar.hope} (참고용. 본문에서 특정 진로 합격·진학을 단정하지 말 것.)`;
   if(ak==='club' && ar.clubName) head += `\n[동아리명] ${ar.clubName}`;
-  const lvTxt = itemsFor(ak).map(it=>{
+  const lvItems = itemsFor(ak);
+  if(lvItems.some(it=> (ar.levels||{})[it.id] && (it.anchor||'').trim()))
+    head += `\n[성취기준 반영] 위계 항목에 연결된 성취기준·단원의 도달 과정과 수준이 드러나게 서술(성취기준 코드·명은 본문에 직접 노출하지 말 것).`;
+  const lvTxt = lvItems.map(it=>{
     const lv = (ar.levels||{})[it.id];
     const sent = lv ? (it.sentences[lv-1]||'').trim() : '';
-    return (lv && sent) ? `- ${it.name||'항목'} — 수준 ${lv}/10: ${sent}` : null;
+    return (lv && sent) ? `- ${it.name||'항목'}${(it.anchor||'').trim()?' [성취기준: '+it.anchor.trim()+']':''} — 수준 ${lv}/10: ${sent}` : null;
   }).filter(Boolean).join("\n");
+  const coach = ar.coach || {q:[],phr:[]};
+  const qaTxt = (coach.q||[]).filter(x=>x.answer && x.answer.trim())
+    .map(x=>`- 문: ${x.question}\n  답: ${x.answer.trim()}`).join("\n");
+  const phrTxt = (coach.phr||[]).filter(p=>p.on).map(p=>p.text).join(", ");
   return `${head}
 
 [항목별 평가 수준(위계)]
@@ -1006,7 +1316,13 @@ ${logs}
 [참고자료]
 ${(ar.paste||'').trim() || '없음'}
 
-위 항목별 평가 수준·누가기록·참고자료에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 위계 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''} 본문만 출력.`;
+[보강 문답 (교사 답변 = 관찰 사실 근거)]
+${qaTxt || '없음'}
+
+[교사가 '관찰됨'으로 선택한 관점 (자료로 뒷받침될 때만 반영, 없으면 무시)]
+${phrTxt || '없음'}
+
+위 항목별 평가 수준·누가기록·참고자료·보강 문답에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 위계 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''} 본문만 출력.`;
 }
 function copyPrompt(no, ak){
   const full = "[시스템 지침]\n"+SYSTEM_PROMPT+"\n\n=====\n\n"+buildUserPrompt(no, ak);
@@ -1070,6 +1386,101 @@ async function generate(no, ak){
   }
 }
 
+/* ---------------- 내용 보강 (코칭 질문 · Claude) ---------------- */
+const COACH_SYSTEM = `당신은 대한민국 고등학교 생기부(세특) 작성을 돕는 코치입니다. 교사가 학생을 더 구체적으로 관찰·기록하도록 '질문'을 던지고, 드러날 만한 '관찰 관점'을 제안합니다.
+- 학생 내면을 단정하지 말고, 관찰 가능한 사실(무엇을 어떻게 했는지·근거·과정·변화)을 끌어내는 질문을 만듭니다.
+- 이미 자료에 있는 사실은 다시 묻지 않습니다. 자료가 빈약하면 활동 자체를 묻습니다.
+- 대회·수상·성적·등수·학교명·기업명·자격증 등 기재 금지 소재와 과장·상투어를 피합니다.
+- 반드시 지정된 JSON만 출력합니다(설명·머리말·코드블록 없이).`;
+function buildCoachPrompt(no, ak){
+  const s = stu(no); const a = AREAS.find(x=>x.k===ak); const ar = s.areas[ak];
+  const logs = (ar.logs||[]).map(lg=>`- ${lg.text}`).join("\n") || "(없음)";
+  const lv = itemsFor(ak).map(it=>{ const l=(ar.levels||{})[it.id]; const sn=l?(it.sentences[l-1]||'').trim():''; return (l&&sn)?`- ${it.name||'항목'}: ${sn}`:null; }).filter(Boolean).join("\n") || "(없음)";
+  let ctx = `[영역] ${areaTitleOf(ak,a)}`;
+  if(ak==='subject' && subjName()) ctx += `\n[과목] ${subjName()}`;
+  if(ak==='career' && ar.hope) ctx += `\n[진로 희망분야] ${ar.hope}`;
+  if(ak==='club' && ar.clubName) ctx += `\n[동아리명] ${ar.clubName}`;
+  return `${ctx}
+[교사가 지금까지 적은 누가기록]
+${logs}
+[참고자료]
+${(ar.paste||'').trim() || "(없음)"}
+[위계 평가 반영]
+${lv}
+
+위 자료를 바탕으로, 이 학생의 '${areaTitleOf(ak,a)}'를 더 구체적·개별적으로 쓰기 위해 교사에게 물어볼 질문 3~4개와, 이 자료에서 드러날 만한 관찰 관점(역량·태도) 키워드 5~6개(짧은 명사구)를 제안하라.
+아래 JSON 형식만 출력: {"questions":["...","..."],"phrases":["...","..."]}`;
+}
+function setCoachMsg(no, cls, html){ const m=document.getElementById('coachMsg-'+no); if(m){ m.className='genmsg '+cls; m.innerHTML=html; } }
+function coachBoxHTML(no, ak){
+  const c = stu(no).areas[ak].coach || {q:[],phr:[]};
+  if(!c.q || c.q.length===0){
+    return `<div class="empty">위 <b>[🤔 보강 질문 받기]</b>를 누르면, AI가 이 학생 자료를 보고 <b>구체적 질문 3~4개</b>와 <b>관찰 관점</b>을 제안합니다. 답을 적으면 그 답이 초안 재료가 됩니다.</div>`;
+  }
+  const qs = c.q.map((it,i)=>`
+    <div class="coach-q">
+      <div class="coach-qtext">Q${i+1}. ${esc(it.question)}</div>
+      <textarea class="txt" rows="2" placeholder="관찰한 사실을 적어주세요 (모르면 비워두기)"
+        oninput="setCoachAnswer(${no},'${ak}',${i},this.value)">${esc(it.answer||'')}</textarea>
+    </div>`).join("");
+  let phr = "";
+  if(c.phr && c.phr.length){
+    phr = `<div class="field" style="margin-top:4px"><label>관찰 관점 (‘관찰됨’인 것만 클릭 → 초안에 반영)</label>
+      <div class="pchips">${c.phr.map((p,i)=>`<span class="pchip ${p.on?'on':''}" onclick="toggleCoachPhr(${no},'${ak}',${i})">${p.on?'✓ ':''}${esc(p.text)}</span>`).join("")}</div></div>`;
+  }
+  return qs + phr;
+}
+function renderCoachBox(no, ak){ const el=document.getElementById('coachBox-'+no); if(el) el.innerHTML = coachBoxHTML(no, ak); }
+function setCoachAnswer(no, ak, i, v){ const c=stu(no).areas[ak].coach; if(c && c.q[i]){ c.q[i].answer=v; saveSoon(); } }
+function toggleCoachPhr(no, ak, i){
+  const c=stu(no).areas[ak].coach; if(!c || !c.phr[i]) return;
+  c.phr[i].on = !c.phr[i].on; save();
+  const box=document.getElementById('coachBox-'+no); const chips=box?box.querySelectorAll('.pchip'):[];
+  if(chips[i]){ chips[i].classList.toggle('on', c.phr[i].on); chips[i].textContent=(c.phr[i].on?'✓ ':'')+c.phr[i].text; }
+}
+function extractJson(t){ const m=t && t.match(/\{[\s\S]*\}/); if(m){ try{ return JSON.parse(m[0]); }catch(_){ } } return null; }
+async function genCoach(no, ak){
+  const key=(state.settings.apiKey||"").trim();
+  if(!key){ setCoachMsg(no,'err','⚙️ 설정에서 API 키를 먼저 입력하세요.'); openSettings(); return; }
+  if(_gen['c'+no]) return; _gen['c'+no]=true;
+  const btn=document.getElementById('coachBtn-'+no); if(btn) btn.disabled=true;
+  setCoachMsg(no,'busy','<span class="spin"></span>질문 만드는 중…');
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'content-type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body: JSON.stringify({ model: state.settings.model || 'claude-opus-4-8', max_tokens:900, system: COACH_SYSTEM, messages:[{role:'user',content: buildCoachPrompt(no,ak)}] })
+    });
+    if(!res.ok){
+      let detail=''; try{ const e=await res.json(); detail=e.error?.message||''; }catch(_){}
+      if(res.status===401) throw new Error('API 키가 올바르지 않습니다.');
+      if(res.status===429) throw new Error('요청 한도 초과(429). 잠시 후 다시.');
+      throw new Error('오류 '+res.status+(detail?': '+detail:''));
+    }
+    const data=await res.json();
+    let out=(data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("").trim();
+    out=out.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
+    let p; try{ p=JSON.parse(out); }catch(_){ p=extractJson(out); }
+    if(!p || !Array.isArray(p.questions) || p.questions.length===0) throw new Error('응답 형식 오류. 다시 시도해 주세요.');
+    const apply=()=>{
+      stu(no).areas[ak].coach = {
+        q: p.questions.slice(0,5).map(q=>({question:String(q), answer:''})),
+        phr: (Array.isArray(p.phrases)?p.phrases:[]).slice(0,8).map(x=>({text:String(x), on:false}))
+      };
+      save(); renderCoachBox(no, ak);
+      setCoachMsg(no,'ok','✅ 질문이 준비됐어요. 아는 만큼만 답해도 됩니다. 답은 [AI 초안 생성]에 함께 반영됩니다.');
+    };
+    const ex=(stu(no).areas[ak].coach||{}).q||[];
+    if(ex.some(x=>x.answer && x.answer.trim())) confirmModal('기존 보강 답변을 지우고 새 질문으로 바꿉니다.\n진행할까요?', true, apply);
+    else apply();
+  }catch(err){
+    const m=(err&&err.message)||''; const net=(err instanceof TypeError||/Failed to fetch|Load failed/i.test(m))?' (네트워크 문제일 수 있음)':'';
+    setCoachMsg(no,'err','⚠ '+(m||'오류')+net);
+  }finally{
+    _gen['c'+no]=false; const b=document.getElementById('coachBtn-'+no); if(b) b.disabled=false;
+  }
+}
+
 /* ---------------- copy / export / import ---------------- */
 function copyDraft(no){
   const txt = (document.getElementById('draft-'+no)||{}).value || "";
@@ -1096,7 +1507,12 @@ function importJSON(e){
   const f = e.target.files[0]; if(!f) return; const r = new FileReader();
   r.onload = ()=>{ try{
     const s = JSON.parse(r.result); if(!s.classes) throw 0;
-    confirmModal('백업 파일로 현재 데이터를 전부 덮어씁니다.\n현재 데이터는 사라집니다. 진행할까요?', true, ()=>{
+    confirmModal('백업 파일로 현재 데이터를 전부 덮어씁니다.\n(현재 데이터는 자동백업에 먼저 저장한 뒤 교체 — 실수해도 ⏱자동백업에서 되살릴 수 있음)\n진행할까요?', true, ()=>{
+      // 덮어쓰기 전 현재 상태 강제 스냅샷(왔다갔다 안전벨트). 실패하면 되돌릴 방법이 없으므로 복원을 중단한다.
+      if(!autoBackup(true, '파일 복원 직전')){
+        alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n지금 복원하면 현재 데이터를 되살릴 수 없어 중단했습니다.\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
+        return;
+      }
       const keepKey = state.settings ? state.settings.apiKey : '';
       state = s; if(!state.settings) state.settings={apiKey:'',model:'claude-opus-4-8'};
       if(!state.settings.apiKey && keepKey) state.settings.apiKey = keepKey;
@@ -1126,6 +1542,68 @@ function mergeJSON(e){
   r.readAsText(f); e.target.value='';
 }
 
+/* ---------------- 자동백업 (이 기기, 하루 1회, 최근 7개) ---------------- */
+// 배열이 아니거나 null 원소가 섞여 있어도 호출부가 터지지 않도록 여기서 정규화한다.
+function autoBkList(){ try{ const a=JSON.parse(localStorage.getItem(BK_KEY)||"[]"); return Array.isArray(a) ? a.filter(Boolean) : []; }catch(e){ return []; } }
+function autoBackup(force, note, pin){
+  try{
+    const arr = autoBkList();
+    const today = todayStr();
+    if(!force && arr.length && arr[arr.length-1].date===today) return true;   // 하루 1회 (force면 예외)
+    const dump = JSON.parse(JSON.stringify(state));
+    if(dump.settings) delete dump.settings.apiKey;             // API 키 제외
+    const rec = { date:today, at:new Date().toLocaleString('ko-KR'), data:dump };
+    if(note) rec.note = note;
+    if(pin) rec.pin = true;                                    // 고정 백업 — 롤링에서 제외
+    arr.push(rec);
+    // 롤링은 pin 아닌 정상 스냅샷만 10개로 제한. pin이 없으면 전환 후 며칠 작업 시 전환직전본이 밀려난다.
+    while(arr.filter(x=>!x.pin).length > 10){ const i=arr.findIndex(x=>!x.pin); if(i<0) break; arr.splice(i,1); }
+    localStorage.setItem(BK_KEY, JSON.stringify(arr));
+    return true;
+  }catch(e){ return false; }   // 저장공간 부족 등 — 호출한 쪽이 알아야 한다
+}
+function openBackups(){
+  const arr = autoBkList();
+  const body = document.getElementById('bkBody');
+  if(arr.length===0){
+    body.innerHTML = `<div class="empty">아직 자동 백업이 없습니다. 앱을 하루 한 번 열 때마다 이 기기에 자동 저장됩니다.</div>`;
+  } else {
+    body.innerHTML = arr.map((b,idx)=>({b,idx})).reverse().map(({b,idx})=>{
+      const cls = Object.keys(b.data.classes||{}).length;
+      const nst = Object.values(b.data.classes||{}).reduce((a,c)=>a+Object.keys(c.students||{}).length,0);
+      return `<div class="bkrow">
+        <div><b>${esc(b.date)}</b> <span class="hint">${esc(b.at||'')}</span>${b.pin?` <span class="hint" style="color:var(--red-accent);font-weight:700">📌 고정</span>`:''}${b.note?` <span class="hint" style="color:var(--amber);font-weight:600">· ${esc(b.note)}</span>`:''}<br><span class="hint">반 ${cls}개 · 학생 ${nst}명</span></div>
+        <div style="display:flex;gap:6px;flex:none;">
+          <button class="btn ghost sm" onclick="downloadBackup(${idx})">⬇ 파일</button>
+          <button class="btn sm" onclick="restoreBackup(${idx})">복원</button>
+        </div></div>`;
+    }).join('');
+  }
+  document.getElementById('bkBack').classList.add('on');
+}
+function closeBackups(){ document.getElementById('bkBack').classList.remove('on'); }
+function downloadBackup(idx){
+  const b = autoBkList()[idx]; if(!b) return;
+  const blob = new Blob([JSON.stringify(b.data,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download = `생기부통합_자동백업_${b.date}.json`; a.click(); URL.revokeObjectURL(a.href);
+}
+function restoreBackup(idx){
+  const b = autoBkList()[idx]; if(!b) return;
+  confirmModal(`${b.date} 자동백업으로 되돌립니다.\n지금 데이터는 이 복원 직전 상태로 자동백업에 한 번 더 저장된 뒤 교체됩니다. 진행할까요?`, true, ()=>{
+    // 복원 직전 현재 상태 강제 스냅샷. 실패하면 지금 데이터를 되살릴 길이 없으므로 중단한다.
+    if(!autoBackup(true, '자동백업 복원 직전')){
+      alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n지금 복원하면 현재 데이터를 되살릴 수 없어 중단했습니다.\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
+      return;
+    }
+    const keepKey = state.settings ? state.settings.apiKey : '';
+    state = JSON.parse(JSON.stringify(b.data));
+    if(!state.settings) state.settings={apiKey:'',model:'claude-opus-4-8'};
+    if(!state.settings.apiKey && keepKey) state.settings.apiKey = keepKey;
+    normalizeState(); save(); openNo=null; closeBackups(); renderAll();
+  });
+}
+
 /* ---------------- settings ---------------- */
 function openSettings(){
   document.getElementById('apiKeyInput').value = state.settings.apiKey || '';
@@ -1153,9 +1631,24 @@ function closeModal(yes){
   _modalCb = null;
 }
 
+/* ---------------- 테마(밝게/어둡게) ---------------- */
+function applyThemeBtn(){
+  const dark = document.documentElement.getAttribute('data-theme')==='dark';
+  const b = document.getElementById('themeBtn'); if(b) b.textContent = dark ? '☀️' : '🌙';
+}
+function toggleTheme(){
+  const dark = document.documentElement.getAttribute('data-theme')!=='dark';
+  document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  try{ localStorage.setItem('saengbuTonghap_theme', dark ? 'dark' : 'light'); }catch(e){}
+  applyThemeBtn();
+}
+
 /* ---------------- utils ---------------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function todayStr(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+/* 이름 매칭 키 — 공백 무시(엄밀), 끝 괄호 표기 무시(느슨: '배연재(공동)' ↔ '배연재') */
+function nameKey(s){ return String(s==null?'':s).replace(/\s+/g,''); }
+function nameBase(s){ return nameKey(s).replace(/([（(\[][^）)\]]*[）)\]])+$/,''); }   // 끝에 붙은 (공동)·[전입] 등 표기 제거
 
 /* ---------------- 링크로 불러오기 (#import=base64) ----------------
    데이터는 URL 해시에만 존재 — 서버로 전송되지 않음.
@@ -1203,19 +1696,130 @@ function importRecords(p){
   const students = (p.students && typeof p.students==='object') ? p.students : {};
   const nos = Object.keys(students);
   if(nos.length===0){ alert('전달된 기록이 없습니다.'); return; }
-  const wanted = (p.className && state.classes[p.className]) ? p.className : null;
+  // hasOwnProperty — className이 'constructor'·'__proto__' 같은 값이면 Object.prototype이 잡혀
+  // 폴백 경고를 지나쳐 버리고 뒤에서 조용히 죽는다.
+  const wanted = (p.className && Object.prototype.hasOwnProperty.call(state.classes, p.className)) ? p.className : null;
   const target = wanted || state.current;
-  const note = (!wanted && p.className) ? `\n※ '${p.className}' 반이 없어 현재 반으로 병합합니다.` : '';
-  const msg = `${src}에서 보낸 기록을 불러옵니다.\n\n대상 반: ${target}\n영역: ${areaDef.t}\n학생 ${nos.length}명${note}\n\n병합할까요? (기존 기록은 지워지지 않고 추가만 됩니다)`;
-  confirmModal(msg, false, ()=>{
+  // 보낸 반이 명단에 없으면 현재 반으로 폴백하되, 번호 매칭을 끈다.
+  // (보내는 앱의 번호가 이 반 번호와 우연히 겹쳐 전혀 다른 학생에게 붙는 사고를 막음)
+  const fallback = !wanted;   // 반 이름이 없거나 안 맞으면 무조건 이름 전용 + 빨간 확인
+  const note = !fallback ? ''
+    : (p.className
+        ? `\n\n⚠ '${p.className}' 반이 명단에 없습니다.\n현재 열려 있는 '${target}' 반에 이름으로만 병합합니다.\n반이 맞지 않으면 취소하고 먼저 명단을 불러오세요.`
+        : `\n\n⚠ 보낸 쪽에 반 정보가 없습니다.\n현재 열려 있는 '${target}' 반에 이름으로만 병합합니다.\n반이 맞는지 확인하고 진행하세요.`);
+  const _rbItems = (p.rubric && Array.isArray(p.rubric.items)) ? p.rubric.items.filter(x=>x && x.key) : [];
+  const rbNote = _rbItems.length
+    ? `\n위계 항목 ${_rbItems.length}개: ${_rbItems.map(x=>x.name||x.key).join(' · ')}\n(채점 점수가 학생별 위계 수준으로 들어갑니다. 이미 골라 둔 수준이 있으면 덮어쓰고 건수를 알려 줍니다)`
+    : '';
+  const msg = `${src}에서 보낸 기록을 불러옵니다.\n\n대상 반: ${target}\n영역: ${areaDef.t}\n학생 ${nos.length}명${rbNote}${note}\n\n병합할까요? (기존 기록은 지워지지 않고 추가만 됩니다)`;
+  confirmModal(msg, fallback, ()=>{
+    // 오배정 사고 대비 — 되돌릴 지점을 먼저 남긴다.
+    // 반을 4개 연달아 보내도 스냅샷은 하루 1개만(저장공간 폭증·과거 일별 백업 조기 삭제 방지).
+    // 그 1개는 '첫 병합 이전' 상태라 되돌리기 지점으로 가장 안전하다.
+    // ★스냅샷은 하루 1개면 충분하지만, '되돌릴 지점이 실제로 있는가'는 매 병합마다 확인한다.
+    //   (예전엔 이 확인이 생성 if 안쪽에 있어, 그날 두 번째 반부터는 저장이 실패해도 그냥 진행되고
+    //    '병합 완료' 거짓 알림이 떴다.)
+    const _td = todayStr();
+    const _hasSnap = ()=> autoBkList().some(r=> r.date===_td && r.note==='기록 병합 직전');
+    if(!_hasSnap()) autoBackup(true, '기록 병합 직전');
+    if(!_hasSnap()){
+      alert('되돌릴 스냅샷을 만들지 못했습니다(저장공간 부족으로 보입니다).\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
+      return;
+    }
     const c = state.classes[target];
-    let matched=0, logAdd=0, pasteAdd=0, dup=0; const missing=[];
+    /* ── 루브릭 → 위계 항목 (규격: _설계\spec_rubric배관.md) ──
+       수행평가의 채점 항목 하나가 이 반의 위계 항목 하나가 된다.
+       항목 id는 rb:<평가id>:<항목key> 로 결정론적 → 재전송해도 복제되지 않고 수준만 갱신된다. */
+    const rb = (p.rubric && typeof p.rubric==='object' && Array.isArray(p.rubric.items)) ? p.rubric : null;
+    let itemMap = null, itemsNew = 0, itemsSeed = 0, lvSet = 0, lvChanged = 0;
+    if(rb){
+      ensureItems(c);
+      const list = c.items[areaDef.k];
+      itemMap = Object.create(null);
+      rb.items.forEach(ri=>{
+        if(!ri || typeof ri!=='object' || !ri.key) return;
+        const id = 'rb:' + String(rb.id||'x') + ':' + String(ri.key);
+        let it = list.find(x=> x && x.id===id);
+        if(!it){
+          it = { id, name:String(ri.name||ri.key), anchor:'', sentences:Array(10).fill('') };
+          if(rb.grp) it.grp = String(rb.grp);
+          list.push(it); itemsNew++;
+        }
+        if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
+        // 문장 씨앗은 '빈 칸에만'. 교사가 고쳐 둔 문장이 정본이므로 절대 덮어쓰지 않는다.
+        (Array.isArray(ri.bands) ? ri.bands : []).forEach(b=>{
+          const lv = Number(b && b.level); if(!(lv>=1 && lv<=10)) return;
+          const s = String((b && b.sent) || '').trim();
+          if(s && !String(it.sentences[lv-1]||'').trim()){ it.sentences[lv-1] = s; itemsSeed++; }
+        });
+        itemMap[String(ri.key)] = id;
+      });
+    }
+    // 번호 불일치(이동수업 학번 등) 대비 이름 인덱스 — 번호 → 이름(공백무시) → 괄호표기 무시 순
+    // Object.create(null): 이름이 'constructor' 같은 값이어도 인덱스가 깨지지 않도록
+    const nameIdx = Object.create(null), baseAll = Object.create(null);
+    Object.keys(c.students).forEach(tno=>{
+      const raw = c.students[tno].name, nm = nameKey(raw); if(!nm) return;
+      (nameIdx[nm] = nameIdx[nm] || []).push(tno);
+      const bs = nameBase(raw);
+      if(bs) (baseAll[bs] = baseAll[bs] || []).push(tno);
+    });
+    let matched=0, logAdd=0, pasteAdd=0, dup=0, byName=0, byBase=0;
+    const missing=[], ambig=[], conflict=[], collide=[], usedTno = Object.create(null);
+    const ambigKeys = Object.create(null);
+    const has = (o,k)=> Object.prototype.hasOwnProperty.call(o,k);
     nos.forEach(no=>{
       const inc = students[no] || {};
-      const st = c.students[no];
-      if(!st){ missing.push((no + ' ' + (inc.name||'')).trim()); return; }
+      // hasOwnProperty 확인 — 번호가 'constructor'·'__proto__' 같은 값일 때 프로토타입이 잡히는 것 차단
+      let st = (!fallback && has(c.students, no)) ? c.students[no] : null;
+      // 번호가 같아도 이름이 다르면 남의 칸이다 → 번호 매칭을 버리고 이름으로 다시 찾는다
+      if(st && nameKey(inc.name) && nameKey(st.name) && nameBase(st.name) !== nameBase(inc.name)){
+        conflict.push(`${no} ${inc.name} ↔ 명단 ${no} ${st.name}`);
+        st = null;
+      }
+      if(!st){
+        const nm = nameKey(inc.name);
+        if(nm){
+          const label = (no + ' ' + (inc.name||'')).trim();
+          const ex = nameIdx[nm] || [];
+          if(ex.length === 1){ st = c.students[ex[0]]; byName++; }
+          else if(ex.length > 1){ ambig.push(`${label} → ${ex.join('·')}`); ambigKeys[no] = 1; }
+          else {
+            const bs = nameBase(inc.name), cand = (bs && baseAll[bs]) || [];
+            if(cand.length === 1){ st = c.students[cand[0]]; byBase++; }
+            // 동명이인 → 학번으로만 구별 가능. 오배정 방지를 위해 매칭하지 않고 후보 학번을 보고
+            else if(cand.length > 1){ ambig.push(`${label} → ${cand.join('·')}`); ambigKeys[no] = 1; }
+          }
+        }
+      }
+      if(!st){
+        // 동명이인으로 보류한 학생은 '명단에 없음'과 구분해 한 번만 보고
+        if(!ambigKeys[no]) missing.push((no + ' ' + (inc.name||'')).trim());
+        return;
+      }
+      // 한 명단 학생에게 '다른 사람'의 기록이 겹쳐 쌓이는 것만 차단.
+      // 같은 사람의 두 번째 기록(발표 1·2차시 등)은 정상이므로 그대로 병합한다(같은 내용은 dup이 막음).
+      const tnoOf = Object.keys(c.students).find(k=> c.students[k] === st);
+      if(tnoOf == null){ missing.push((no + ' ' + (inc.name||'')).trim()); return; }   // 정상 학생이 아님
+      const who = nameBase(inc.name);
+      if(usedTno[tnoOf] != null && usedTno[tnoOf] !== who){
+        collide.push(`${(no + ' ' + (inc.name||'')).trim()} → 이미 다른 이름이 배정된 자리`); return;
+      }
+      usedTno[tnoOf] = who;
       matched++; ensureAreas(st);
       const ar = st.areas[areaDef.k];
+      // 채점 항목별 점수 → 위계 수준. 키공간은 "1".."10" 그대로(마이그레이션 없음).
+      if(itemMap && inc.levels && typeof inc.levels==='object'){
+        if(!ar.levels || typeof ar.levels!=='object') ar.levels = {};
+        Object.keys(inc.levels).forEach(k=>{
+          if(!has(itemMap, k)) return;
+          const lv = Number(inc.levels[k]); if(!(lv>=1 && lv<=10)) return;
+          const id = itemMap[k], prev = has(ar.levels, id) ? ar.levels[id] : null;
+          if(prev == null || String(prev)==='') lvSet++;
+          else if(String(prev) !== String(lv)) lvChanged++;
+          ar.levels[id] = String(lv);
+        });
+      }
       (Array.isArray(inc.logs) ? inc.logs : []).forEach(lg=>{
         const text = String((lg && lg.text) || '').trim();
         if(!text) return;
@@ -1229,15 +1833,24 @@ function importRecords(p){
         else { ar.paste = ((ar.paste||'').trim() ? ar.paste.trim() + '\n\n' : '') + paste; pasteAdd++; }
       }
     });
-    save(); openNo=null; renderAll();
-    alert(`기록 병합 완료 — '${target}' 학생 ${matched}명\n누가기록 ${logAdd}건 · 참고자료 ${pasteAdd}건 추가`
+    const _saved = save(); openNo=null; renderAll();
+    // 저장이 실패했는데 '완료'라고 알리면 교사가 사라진 데이터를 모른 채 넘어간다.
+    alert((_saved ? '' : '⚠ 저장에 실패했습니다(저장 공간 부족).\n지금 바로 [⬇ 백업]으로 파일을 내려받으세요. 새로고침하면 아래 내용이 사라집니다.\n\n')
+      + `기록 병합 완료 — '${target}' 학생 ${matched}명\n누가기록 ${logAdd}건 · 참고자료 ${pasteAdd}건 추가`
+      + (rb ? `\n위계: 항목 ${itemsNew}개 생성 · 문장 ${itemsSeed}칸 채움 · 수준 ${lvSet}건 입력` : '')
+      + (lvChanged ? `\n※ 이미 골라 둔 수준 ${lvChanged}건을 새 점수로 덮어썼습니다` : '')
+      + (byName ? `\n(번호가 달라 이름으로 매칭: ${byName}명)` : '')
+      + (byBase ? `\n(괄호 표기 차이로 매칭: ${byBase}명 — 예: '홍길동' ↔ '홍길동(공동)')` : '')
       + (dup ? `\n(이미 있던 내용 ${dup}건은 건너뜀)` : '')
+      + (ambig.length ? `\n※ 동명이인이라 자동 매칭하지 않음 — 학번으로 구별해 직접 입력하세요: ${ambig.join(', ')}` : '')
+      + (conflict.length ? `\n※ 번호는 같은데 이름이 달라 번호 매칭을 버림: ${conflict.join(', ')}` : '')
+      + (collide.length ? `\n※ 한 학생에게 둘 이상이 매칭되어 건너뜀(확인 필요): ${collide.join(', ')}` : '')
       + (missing.length ? `\n명단에 없어 건너뛴 학생: ${missing.join(', ')}` : ''));
   });
 }
 
 /* ---------------- boot ---------------- */
-load(); renderAll(); handleHashImport();
+load(); autoBackup(); applyThemeBtn(); renderAll(); handleHashImport();
 </script>
 </body>
 </html>
