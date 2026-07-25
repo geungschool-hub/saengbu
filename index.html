@@ -643,7 +643,7 @@ function ensureAreas(s){
     if(!s.areas[a.k]) s.areas[a.k] = { logs:[], paste:"", draft:"" };
     if(!s.areas[a.k].levels || typeof s.areas[a.k].levels!=='object') s.areas[a.k].levels = {};
     if(!s.areas[a.k].coach || typeof s.areas[a.k].coach!=='object') s.areas[a.k].coach = { q:[], phr:[] };
-    // ev=활동별 '이 학생만의 장면', pre=일괄 채움된 미확인 값. 구버전이 모르는 키라 백업 왕복에도 살아남는다.
+    // ev=활동별 '학생별 활동 중 특이사항', pre=일괄 채움된 미확인 값. 구버전이 모르는 키라 백업 왕복에도 살아남는다.
     if(!s.areas[a.k].ev  || typeof s.areas[a.k].ev !=='object') s.areas[a.k].ev  = {};
     if(!s.areas[a.k].pre || typeof s.areas[a.k].pre!=='object') s.areas[a.k].pre = {};
   });
@@ -966,7 +966,7 @@ function levelSectionHTML(no, ak){
         </div>
         ${G.items.map(rowHTML).join('')}
         <div class="lvev"><input class="txt" value="${esc((ar.ev||{})[G.key]||'')}"
-          placeholder="🏷 이 학생만의 장면 (선택) — 명사구 또는 ~함 문장"
+          placeholder="🏷 학생별 활동 중 특이사항 (선택) — 명사구 또는 ~함 문장"
           oninput="setEv(${no},'${ak}','${esc(G.key)}',this.value)"></div>
       </div>`;
     }).join('') + (()=>{
@@ -1172,7 +1172,7 @@ function composedLevels(no, ak){
     .filter(Boolean).join(' ');
 }
 /* ═══ 합성 파이프라인 — 활동당 정확히 1문장 ═══ */
-/* 학생 고유 장면(ev)은 자유 텍스트라 형태를 예측할 수 없다. 두 형태만 받고 각각 다른 자리에 넣는다.
+/* 학생별 활동 중 특이사항(ev)은 자유 텍스트라 형태를 예측할 수 없다. 두 형태만 받고 각각 다른 자리에 넣는다.
    명사구('감자 절편 재측정 제안') → 도입 소재로 '~에서'
    ~함 문장('예상과 다른 구간을 다시 측정함') → 앞에 독립 문장으로 세운다
    '에서'는 받침과 무관하게 붙으므로 조사 선택이 필요 없다. */
@@ -1205,7 +1205,7 @@ function synthGroupText(G, ar){
   const ev = evForm((ar.ev||{})[G.key]);
   /* ★활동명은 문장에 넣지 않는다 — 도달한 수행 수준만 서술해도 충분하고,
      활동명이 들어가면 활동 수만큼 반복돼 글자수만 먹는다.
-     도입 소재는 '이 학생만의 장면(ev)'이 있을 때만 쓴다(그건 활동명이 아니라 개인화 재료다). */
+     도입 소재는 '학생별 활동 중 특이사항(ev)'이 있을 때만 쓴다(그건 활동명이 아니라 개인화 재료다). */
   const lead = (ev && !ev.nominal) ? (ev.txt + '에서 ') : '';
   const pre  = (ev &&  ev.nominal) ? (ev.txt + '. ')   : '';
   let body;
@@ -1252,6 +1252,16 @@ function synthLevels(no, ak){
   return { text, dropped, omitted:list.reduce((n,G)=>n+G.omitted,0),
            unrev:list.reduce((n,G)=> n + (G.picks.some(p=>p.auto && !p.rev) ? 1 : 0), 0) };
 }
+/* 프롬프트용 — 활동별 '학생별 활동 중 특이사항'. 값이 있는 활동만 적는다.
+   위계는 반 전체가 같은 문장을 쓰므로, 이 칸이 그 학생을 다른 학생과 갈라 놓는 유일한 재료다.
+   ★활동명은 어느 활동인지 알려 주는 라벨일 뿐 — 본문에 옮겨 적지 말라는 지시가 함께 나간다. */
+function evBlocks(no, ak){
+  const ar = stu(no).areas[ak], ev = ar.ev || {};
+  return groupItems(itemsFor(ak)).map(G=>{
+    const v = String(ev[G.key]||'').trim();
+    return v ? `- ${G.name || '활동'}: ${v}` : null;
+  }).filter(Boolean).join('\n');
+}
 /* 프롬프트용 — 활동(큰 주제)별로 묶어 항목·수준을 적는다.
    AI가 '따로 놀던 채점 항목 N개'가 아니라 '활동 하나 안의 여러 면'으로 읽게 하려는 것. */
 function levelBlocks(no, ak){
@@ -1277,7 +1287,7 @@ function hasLevels(no, ak){
   const ar = stu(no).areas[ak];
   return itemsFor(ak).some(it=> !!sentOf(it, (ar.levels||{})[it.id]));
 }
-/* 이 학생만의 장면. 입력 중 전체 리렌더를 하면 포커스가 날아가므로 저장만 하고,
+/* 학생별 활동 중 특이사항. 입력 중 전체 리렌더를 하면 포커스가 날아가므로 저장만 하고,
    합성 미리보기는 포커스를 잃을 때(blur) 갱신한다. */
 function setEv(no, ak, gkey, v){
   const ar = stu(no).areas[ak];
@@ -1699,7 +1709,11 @@ const SYSTEM_PROMPT = `당신은 대한민국 고등학교 학교생활기록부
 [출력 형식]
 - 완성된 생기부 문구 본문만 출력한다. 설명·머리말·따옴표·코드블록·'초안:' 같은 라벨을 붙이지 않는다.
 - 지정된 영역의 글자수(공백 포함)를 넘지 않게 한다.
-- 마지막 글자는 마침표(.)여야 한다.`;
+- 마지막 글자는 마침표(.)여야 한다.
+- ★근거 자료에 붙은 **활동명·평가 항목명·성취기준 코드는 맥락 파악용 라벨**이다. 본문에 그대로 옮겨 적지 말고,
+  그 활동에서 **학생이 실제로 도달한 수행 수준**을 서술한다.
+  (예: '삼투 실험 탐구에서 결론을 추론함' ✗ → '근거를 들어 타당한 결론을 추론함' ○)
+  단 교사가 누가기록·참고자료·특이사항에 직접 적은 구체적 사실·산출물·도서명은 그대로 살려 쓴다.`;
 
 function buildUserPrompt(no, ak){
   const s = stu(no); const a = AREAS.find(x=>x.k===ak); const ar = s.areas[ak];
@@ -1713,6 +1727,7 @@ function buildUserPrompt(no, ak){
   if(lvItems.some(it=> (ar.levels||{})[it.id] && (it.anchor||'').trim()))
     head += `\n[성취기준 반영] 위계 항목에 연결된 성취기준·단원의 도달 과정과 수준이 드러나게 서술(성취기준 코드·명은 본문에 직접 노출하지 말 것).`;
   const lvTxt = levelBlocks(no, ak);   // 활동(큰 주제) 단위로 묶인 블록
+  const evTxt = evBlocks(no, ak);      // 학생별 활동 중 특이사항 — 있을 때만 블록이 붙는다
   const coach = ar.coach || {q:[],phr:[]};
   const qaTxt = (coach.q||[]).filter(x=>x.answer && x.answer.trim())
     .map(x=>`- 문: ${x.question}\n  답: ${x.answer.trim()}`).join("\n");
@@ -1720,7 +1735,11 @@ function buildUserPrompt(no, ak){
   return `${head}
 
 [항목별 평가 수준(위계)]
-${lvTxt || '없음'}${lvTxt.includes('[활동]') ? '\n(같은 활동 안의 여러 항목은 한 활동의 여러 면이다. 항목을 나열하지 말고 그 활동에 대한 서술로 통합할 것.)' : ''}
+${lvTxt || '없음'}${lvTxt.includes('[활동]') ? '\n(같은 활동 안의 여러 항목은 한 활동의 여러 면이다. 항목을 나열하지 말고 그 활동에 대한 서술로 통합할 것.\n ★활동명·항목명은 맥락 파악용일 뿐이다. 본문에 그대로 쓰지 말고, 도달한 수행 수준만 서술할 것.)' : ''}${evTxt ? `
+
+[학생별 활동 중 특이사항 (교사가 직접 관찰한 사실 · ★이 학생을 다른 학생과 구별하는 핵심 재료)]
+${evTxt}
+(위계 문장은 반 전체가 공유하지만 이것은 이 학생만의 것이다. 반드시 본문에 반영하되, 앞의 활동명 라벨은 옮겨 적지 말 것.)` : ''}
 
 [누가기록]
 ${logs}
@@ -1734,7 +1753,7 @@ ${qaTxt || '없음'}
 [교사가 '관찰됨'으로 선택한 관점 (자료로 뒷받침될 때만 반영, 없으면 무시)]
 ${phrTxt || '없음'}
 
-위 항목별 평가 수준·누가기록·참고자료·보강 문답에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 위계 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''} 본문만 출력.`;
+위 항목별 평가 수준·${evTxt?'특이사항·':''}누가기록·참고자료·보강 문답에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 위계 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''}${evTxt?' 특이사항은 빠뜨리지 말 것 — 그것이 이 학생만의 내용이다.':''} 본문만 출력.`;
 }
 function copyPrompt(no, ak){
   const full = "[시스템 지침]\n"+SYSTEM_PROMPT+"\n\n=====\n\n"+buildUserPrompt(no, ak);
@@ -1745,8 +1764,8 @@ async function generate(no, ak){
   const key = (state.settings.apiKey||"").trim();
   if(!key){ setGenMsg(no,'err','⚙️ 설정에서 API 키를 먼저 입력하세요. (또는 [프롬프트만 복사]로 외부 AI 사용)'); openSettings(); return; }
   const s = stu(no); const ar = s.areas[ak];
-  if((!ar.logs || ar.logs.length===0) && !(ar.paste||'').trim() && !hasLevels(no, ak)){
-    setGenMsg(no,'err','누가기록·참고자료·위계 평가 중 하나는 먼저 입력하세요. (없는 내용은 생성하지 않습니다.)'); return;
+  if((!ar.logs || ar.logs.length===0) && !(ar.paste||'').trim() && !hasLevels(no, ak) && !evBlocks(no, ak)){
+    setGenMsg(no,'err','누가기록·참고자료·위계 평가·특이사항 중 하나는 먼저 입력하세요. (없는 내용은 생성하지 않습니다.)'); return;
   }
   if(_gen[no]) return;               // 같은 학생 중복 생성 방지
   _gen[no] = true;
@@ -1819,7 +1838,9 @@ ${logs}
 [참고자료]
 ${(ar.paste||'').trim() || "(없음)"}
 [위계 평가 반영]
-${lv}
+${lv}${evBlocks(no,ak) ? `
+[학생별 활동 중 특이사항]
+${evBlocks(no,ak)}` : ''}
 
 위 자료를 바탕으로, 이 학생의 '${areaTitleOf(ak,a)}'를 더 구체적·개별적으로 쓰기 위해 교사에게 물어볼 질문 3~4개와, 이 자료에서 드러날 만한 관찰 관점(역량·태도) 키워드 5~6개(짧은 명사구)를 제안하라.
 아래 JSON 형식만 출력: {"questions":["...","..."],"phrases":["...","..."]}`;
