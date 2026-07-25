@@ -142,6 +142,12 @@ input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
 
 /* ---- draft + linter ---- */
 .draftbox{border:1.5px solid var(--blue-dark);border-radius:var(--r-md);overflow:hidden;box-shadow:var(--sh-2);}
+.draft-sec{border-color:var(--blue-dark);}
+.draft-sec textarea{min-height:210px;}
+.classrow{display:flex;gap:var(--sp-1);align-items:center;margin-bottom:var(--sp-2);}
+.classrow select.cls{flex:1;min-width:0;}
+.iconbtn.sq{padding:var(--sp-2);min-width:38px;}
+.master-tools .subjin{width:100%;max-width:none;margin-bottom:var(--sp-2);}
 .draftbox textarea{border:none;border-radius:0;width:100%;padding:var(--sp-3);font-size:var(--fs-lg);line-height:1.75;min-height:120px;resize:vertical;}
 .draftbox textarea:focus{outline:none;}
 .meter{display:flex;flex-wrap:wrap;gap:var(--sp-2);align-items:center;padding:var(--sp-2) var(--sp-3);background:var(--soft);border-top:1px solid var(--brd2);font-size:var(--fs-sm);color:var(--text-light);}
@@ -260,9 +266,10 @@ select.lvsel{padding:var(--sp-2);border:1.5px solid var(--brd);border-radius:var
 
 /* 편집: 중(작성) · 우(기재요령·검증) — 넓은 화면에서 3-pane 완성 */
 .editor-grid{display:grid;gap:var(--sp-4);grid-template-columns:1fr;align-items:start;}
-@media(min-width:1280px){ .editor-grid{grid-template-columns:minmax(0,1fr) 300px;} }
+@media(min-width:1280px){ .editor-grid{grid-template-columns:minmax(0,1fr) 420px;} }
+@media(min-width:1600px){ .editor-grid{grid-template-columns:minmax(0,1fr) 480px;} }
 .editor-ref{display:flex;flex-direction:column;gap:var(--sp-3);}
-@media(min-width:1280px){ .editor-ref{position:sticky;top:2px;} }
+@media(min-width:1280px){ .editor-ref{position:sticky;top:2px;max-height:calc(100dvh - 96px);overflow-y:auto;} }
 .ref-card{background:var(--soft);border:1px solid var(--brd2);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-3);}
 .ref-title{font-size:var(--fs-md);font-weight:700;color:var(--blue-dark);margin-bottom:var(--sp-2);}
 .ref-hint{font-size:var(--fs-sm);line-height:1.7;color:var(--text-light);}
@@ -297,16 +304,6 @@ body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역�
       <button class="iconbtn hidden" id="saveWarn" style="border-color:var(--red-accent);color:var(--red-accent);font-weight:700;" onclick="exportJSON()" title="저장 공간 부족 — 지금 파일로 백업하세요">⚠ 저장 안 됨 · 백업</button>
       <button class="iconbtn" id="themeBtn" onclick="toggleTheme()" title="밝게/어둡게">🌙</button>
       <button class="iconbtn" onclick="openDash()">📊 현황</button>
-      <button class="iconbtn" onclick="openSettings()">⚙️ 설정</button>
-      <span class="savestat" id="saveStat"></span>
-    </div>
-    <div class="classsel">
-      <select class="cls" id="classSel" onchange="switchClass(this.value)"></select>
-      <button class="iconbtn" onclick="addClass()">＋반</button>
-      <button class="iconbtn" onclick="renameClass()">✏️</button>
-      <button class="iconbtn" onclick="deleteClass()">🗑️</button>
-      <input class="subjin" id="subjInput" type="text" placeholder="교과 과목명(예: 통합과학)" oninput="onSubjectInput(this.value)" onchange="renderStudents()">
-      <span class="spacer"></span>
       <button class="iconbtn" onclick="openRoster()">📋 명단</button>
       <!-- 백업 계열 4개는 가끔 쓰는 것이라 메뉴로 접는다. 상단바에 같은 무게의 버튼이 10개 늘어서 있으면
            매일 쓰는 것과 가끔 쓰는 것이 구분되지 않아 화면이 시끄러워진다. -->
@@ -320,6 +317,8 @@ body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역�
           <button onclick="closeDataMenu();document.getElementById('importFile').click()" class="danger"><b>⬆ 덮어쓰기 복원</b><span>현재 데이터를 파일로 교체</span></button>
         </div>
       </div>
+      <button class="iconbtn" onclick="openSettings()" title="설정">⚙️</button>
+      <span class="savestat" id="saveStat"></span>
       <input type="file" id="mergeFile" accept="application/json" class="hidden" onchange="mergeJSON(event)">
       <input type="file" id="importFile" accept="application/json" class="hidden" onchange="importJSON(event)">
     </div>
@@ -328,7 +327,16 @@ body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역�
   <div class="main">
     <div class="workspace" id="workspace">
       <aside class="stu-master">
+        <!-- 반 선택은 '이 목록이 어느 반인가'를 정하는 것이므로 학생 목록 바로 위가 자연스럽다.
+             상단바에 두면 목록과 멀어져 무엇을 고르는 중인지 시선이 끊긴다. -->
         <div class="master-tools">
+          <div class="classrow">
+            <select class="cls" id="classSel" onchange="switchClass(this.value)"></select>
+            <button class="iconbtn sq" onclick="addClass()" title="반 추가">＋</button>
+            <button class="iconbtn sq" onclick="renameClass()" title="반 이름 바꾸기">✏️</button>
+            <button class="iconbtn sq" onclick="deleteClass()" title="반 삭제">🗑️</button>
+          </div>
+          <input class="subjin" id="subjInput" type="text" placeholder="교과 과목명(예: 통합과학)" oninput="onSubjectInput(this.value)" onchange="renderStudents()">
           <input class="stu-filter" id="stuFilter" type="text" placeholder="🔍 학생 검색 (이름·번호)" oninput="onStuFilter(this.value)">
         </div>
         <div class="stu-list" id="students"></div>
@@ -895,7 +903,8 @@ function refPanel(no, ak){
     <div class="ref-card">
       <div class="ref-title">🔎 실시간 검증</div>
       <div class="chips" id="lint-${no}"><span class="chip good" style="opacity:.5">초안을 입력하면 자동 검사합니다.</span></div>
-    </div>`;
+    </div>
+    ${draftSectionHTML(no, ak)}`;
 }
 function areaTitleOf(ak, a){
   if(ak==='subject') return subjName() ? subjName()+' 세부능력 및 특기사항' : '교과 세부능력 및 특기사항';
@@ -944,8 +953,16 @@ function areaPanel(no, ak){
     <div class="genmsg" id="coachMsg-${no}"></div>
     <div id="coachBox-${no}">${coachBoxHTML(no, ak)}</div>
   </div>
-
-  <div class="sec">
+`;
+}
+/* 초안(결과물)은 우측 칼럼에 고정한다.
+   ★재료(위계·누가기록·참고자료·보강)는 길어서 스크롤하는데, 정작 쓰는 글이 맨 아래에 있으면
+     재료를 보며 쓸 수가 없다. 넓은 화면에서는 오른쪽에 붙여 두고 왼쪽만 스크롤시킨다.
+     좁은 화면(<1280px)에서는 grid가 1열이 되어 예전처럼 아래에 쌓인다. */
+function draftSectionHTML(no, ak){
+  const a = AREAS.find(x=>x.k===ak), ar = stu(no).areas[ak];
+  const aTitle = areaTitleOf(ak, a);
+  return `<div class="sec draft-sec">
     <h3>✨ ${esc(aTitle)} 초안</h3>
     <div class="genrow">
       <button class="btn ${a.color==='green'?'green':a.color==='amber'?'amber':''}" id="genBtn-${no}" onclick="generate(${no},'${ak}')">🤖 AI 초안 생성</button>
