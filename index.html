@@ -152,6 +152,13 @@ input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
 select.lvsel{padding:8px;border:1.5px solid var(--brd);border-radius:8px;background:var(--surface);max-width:100%;min-height:44px;}
 .lvsent{flex:1 1 100%;font-size:12.5px;line-height:1.55;}
 .lvhint{color:var(--muted);font-size:11.5px;}
+/* ---- 활동(큰 주제) 묶음 카드 — 그 안에 채점 항목별 위계 줄이 들어간다 ---- */
+.lvgrp{border:1px solid var(--brd3);border-radius:10px;padding:9px 10px 4px;margin-bottom:9px;background:var(--soft);}
+.lvghead{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-weight:700;color:var(--blue-dark);font-size:12.5px;margin-bottom:4px;}
+.lvganchor{font-weight:500;font-size:11px;color:var(--muted);}
+.lvgcount{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--soft2);border-radius:8px;padding:2px 7px;}
+.lvgcount.full{color:var(--green-dark);}
+.lvgrp .lvrow:last-child{border-bottom:0;}
 .itembox{border:1px solid var(--brd3);border-radius:10px;padding:10px;margin-bottom:9px;background:var(--surface);}
 .itemhead{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
 .lvledit{display:flex;gap:7px;align-items:flex-start;margin-top:6px;}
@@ -181,6 +188,15 @@ select.lvsel{padding:8px;border:1.5px solid var(--brd);border-radius:8px;backgro
 /* 위계 항목 관리 — 성취기준 앵커 · 반간 재사용 */
 .bankrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:8px 11px;background:var(--soft);border:1px solid var(--brd2);border-radius:9px;}
 .bankrow select.cls{padding:6px 9px;}
+/* ---- 항목 관리 모달: 활동(큰 주제) 묶음 ---- */
+.grpwrap{border:1.5px solid var(--brd3);border-radius:12px;padding:9px;margin-bottom:11px;background:var(--soft);}
+.grpwrap.solo{border-style:dashed;background:transparent;padding:6px 0 0;border-width:0 0 1px 0;border-radius:0;}
+.grphead{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:8px;}
+.grpbadge{background:var(--green-dark);color:#fff;font-size:10.5px;font-weight:700;border-radius:6px;padding:3px 7px;}
+.grpname{flex:1;min-width:170px;font-weight:700;}
+.grpn{font-size:11px;color:var(--muted);}
+.grpfoot{margin-top:4px;}
+.grpwrap.solo .grpfoot{margin:2px 0 8px;}
 .itemanchor{margin:7px 0 2px;}
 .itemanchor input{font-size:13px;border-style:dashed;}
 
@@ -323,6 +339,7 @@ body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역�
     <div class="note" style="margin-bottom:10px;">항목 = 수행평가·관찰 영역 단위. <b>[자동 생성]</b>은 항목명에 맞는 위계 1~10 기본 문장을 만들며, 각 문장은 직접 수정할 수 있습니다. <b>🔗 성취기준·단원</b>을 연결하면 초안이 그 도달 과정 중심으로 쓰이고(생명과학은 코드 자동완성), <b>다른 반에서 만든 항목을 그대로 가져와</b> 재사용할 수 있습니다. 이 설정은 <b>현재 반 전체 공용</b>이고, 학생 카드에서는 항목별 수준(1~10)만 고르면 됩니다.</div>
     <div id="itemsBody"></div>
     <div class="mrow">
+      <button class="btn green" onclick="addGroup()">＋ 활동 추가</button>
       <button class="btn ghost" onclick="addItem()">＋ 항목 추가</button>
       <button class="btn green" onclick="closeItems()">완료</button>
     </div>
@@ -560,6 +577,22 @@ function normItem(it){
   if(!it.id) it.id = newItemId();
   if(typeof it.name  !== 'string') it.name  = '';
   if(typeof it.anchor!== 'string') it.anchor= '';
+  /* ── 활동(큰 주제) 묶음 ──
+     grp = 같은 활동에 속한 항목끼리 공유하는 키. 빈 문자열이면 단독 항목.
+     base = 활동 이름(그룹 머리글에 보임). 항목명(name)은 그 안의 채점 항목 이름.
+     ★구버전 데이터는 둘 다 ''로 시작 → 단독 항목으로 그대로 보인다(동작 불변). */
+  if(typeof it.grp  !== 'string') it.grp  = '';
+  if(typeof it.base !== 'string') it.base = '';
+  /* 채점앱에서 들어온 루브릭 항목은 id가 `rb:<루브릭id>:<채점키>` 라 활동이 이미 암묵적으로 들어 있다.
+     → 그 묶음을 grp로 복원한다(교사가 손으로 다시 묶지 않아도 됨). 이미 grp가 있으면 건드리지 않는다. */
+  if(!it.grp){
+    const m = /^rb:(.+):[^:]+$/.exec(it.id);
+    if(m) it.grp = 'rb:' + m[1];
+  }
+  /* 채점앱이 grp에 사람이 읽는 활동명을 그대로 넣어 주기도 한다(예: '혈액형 판정').
+     그럴 때는 활동 이름(base)으로 승격해서 머리글에 보이게 한다.
+     자동 생성 키(g1a2b3… / rb:…)는 이름이 아니므로 제외 — 그때는 교사가 직접 적는다. */
+  if(it.grp && !it.base && !/^(rb:|g[0-9a-z]{6,})/.test(it.grp)) it.base = it.grp;
   if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
   else {
     it.sentences = it.sentences.slice(0,10).map(s=> typeof s==='string' ? s : '');
@@ -886,7 +919,7 @@ function levelSectionHTML(no, ak){
   if(items.length===0){
     inner = `<div class="empty">아직 항목이 없습니다. <b>[⚙ 항목 관리]</b>에서 수행평가·관찰 영역과 위계 1~10 문장을 만들어 두면, 학생마다 수준만 골라 문장을 자동으로 얻습니다. (반 전체 공용)</div>`;
   } else {
-    inner = items.map(it=>{
+    const rowHTML = it=>{
       const lv = (ar.levels||{})[it.id] || '';
       const sent = sentOf(it, lv);
       const opts = Array.from({length:10},(_,i)=>i+1).map(n=>{
@@ -900,6 +933,20 @@ function levelSectionHTML(no, ak){
           <option value="">— 수준 선택</option>${opts}
         </select>
         <span class="lvsent" id="lvsent-${no}-${it.id}">${sent?esc(sent):'<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>'}</span>
+      </div>`;
+    };
+    /* 활동(큰 주제)으로 묶어 보여 준다. 활동에 속한 항목이 2개 이상일 때만 머리글 카드를 씌우고,
+       단독 항목은 예전 그대로 낱줄로 둔다 — 구버전 화면이 갑자기 달라 보이지 않게 하려는 것. */
+    inner = groupItems(items).map(G=>{
+      if(G.items.length === 1 && G.solo) return rowHTML(G.items[0]);
+      const done = G.items.filter(it=> (ar.levels||{})[it.id]).length;
+      return `<div class="lvgrp">
+        <div class="lvghead">
+          <span>${esc(G.name || '(활동명 없음)')}</span>
+          ${G.anchor ? `<span class="lvganchor">🔗 ${esc(G.anchor)}</span>` : ''}
+          <span class="lvgcount${done===G.items.length?' full':''}">${done}/${G.items.length}</span>
+        </div>
+        ${G.items.map(rowHTML).join('')}
       </div>`;
     }).join('') + `<div style="margin-top:9px;">
       <button class="btn ghost sm" onclick="composeLevels(${no},'${ak}')">⤵ 선택한 위계 문장 조합을 초안에 넣기</button>
@@ -963,6 +1010,29 @@ function withPeriod(s){
    화면·조합·프롬프트가 전부 이걸 거치므로, 교사가 마침표 없이 적었거나
    옛 데이터·다른 반에서 가져온 문장이어도 항상 마침표로 끝난 문장이 나간다.
    형태가 깨진 항목(sentences 없음)은 예외 대신 빈 문자열을 돌려준다. */
+/* 활동 묶음 키 — 단독 항목도 자기만의 키를 갖게 해서 아래 groupItems가 한 갈래로 처리된다. */
+function gkeyOf(it){ return (it && it.grp) || ('#' + (it && it.id)); }
+/* 활동 이름 — base가 있으면 그것, 없으면 항목명(구버전 단독 항목) */
+function gnameOf(it){ return (it && it.base) || (it && it.name) || ''; }
+/* 항목 배열을 활동 단위로 묶는다. **배열 등장 순서를 보존**해서 교사가 만든 순서대로 보인다.
+   반환: [{ key, name, anchor, items:[...] }] — 단독 항목은 items 1개짜리 그룹이 된다. */
+function groupItems(items){
+  const out = [], idx = Object.create(null);
+  (items||[]).forEach(it=>{
+    if(!it) return;
+    const k = gkeyOf(it);
+    if(idx[k] == null){
+      idx[k] = out.length;
+      out.push({ key:k, name:gnameOf(it), anchor:(it.anchor||''), solo:!it.grp, items:[] });
+    }
+    out[idx[k]].items.push(it);
+    // 활동 이름·앵커는 그룹 안에서 처음 채워진 값을 쓴다(항목마다 비어 있을 수 있음)
+    const G = out[idx[k]];
+    if(!G.name && gnameOf(it)) G.name = gnameOf(it);
+    if(!G.anchor && it.anchor) G.anchor = it.anchor;
+  });
+  return out;
+}
 function sentOf(it, lv){
   if(!it || !lv) return '';
   const n = parseInt(lv, 10);
@@ -987,6 +1057,27 @@ function composedLevels(no, ak){
   return itemsFor(ak)
     .map(it=> sentOf(it, (ar.levels||{})[it.id]))
     .filter(Boolean).join(' ');
+}
+/* 프롬프트용 — 활동(큰 주제)별로 묶어 항목·수준을 적는다.
+   AI가 '따로 놀던 채점 항목 N개'가 아니라 '활동 하나 안의 여러 면'으로 읽게 하려는 것. */
+function levelBlocks(no, ak){
+  const ar = stu(no).areas[ak];
+  return groupItems(itemsFor(ak)).map(G=>{
+    // 단독 항목은 v3.2 이래의 줄 형식을 글자 하나 바꾸지 않고 그대로 쓴다(회귀 기준).
+    if(G.solo && G.items.length===1){
+      const it = G.items[0], lv = (ar.levels||{})[it.id], sn = sentOf(it, lv);
+      if(!(lv && sn)) return null;
+      return `- ${it.name||'항목'}${(it.anchor||'').trim()?' [성취기준: '+it.anchor.trim()+']':''} — 수준 ${lv}/10: ${sn}`;
+    }
+    const picked = G.items.map(it=>{
+      const lv = (ar.levels||{})[it.id];
+      const sn = sentOf(it, lv);
+      return sn ? `  - ${it.name||'항목'} — 수준 ${lv}/10: ${sn}` : null;
+    }).filter(Boolean);
+    if(!picked.length) return null;
+    const head = `- [활동] ${G.name||'활동'}${(G.anchor||'').trim()?` [성취기준: ${G.anchor.trim()}]`:''}`;
+    return head + '\n' + picked.join('\n');
+  }).filter(Boolean).join('\n');
 }
 function hasLevels(no, ak){
   const ar = stu(no).areas[ak];
@@ -1036,9 +1127,7 @@ function renderItemsModal(){
   const dl = `<datalist id="achvList">${achvOptionsHTML()}</datalist>`;
   // ★핸들러는 전부 항목 id 기준. 위치 인덱스를 쓰면 목록 순서가 바뀌는 순간
   //   '삭제'가 엉뚱한 항목을 지우고 반 전체 학생의 수준 선택이 함께 날아간다.
-  const body = items.length===0
-    ? `<div class="empty">항목이 없습니다. 아래 <b>[＋ 항목 추가]</b>로 시작하세요. (예: '3D 세포 모형 만들기' 수행평가, '교우관계' 관찰 영역)</div>`
-    : items.map(it=>`
+  const itemBox = it=>`
       <div class="itembox">
         <div class="itemhead">
           <input class="txt" style="flex:1;min-width:150px;" value="${esc(it.name)}" placeholder="항목명 (예: 유전 원리 탐구, 교우관계)" oninput="onItemName('${it.id}',this.value)">
@@ -1056,12 +1145,75 @@ function renderItemsModal(){
               <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent('${it.id}',${lv},this.value)" onblur="onItemSentBlur('${it.id}',${lv},this)">${esc(it.sentences[lv]||'')}</textarea>
             </div>`).join('')}
         </div>
-      </div>`).join('');
+      </div>`;
+  /* 활동(큰 주제)으로 묶어 보여 준다. 활동 카드 안에서 채점 항목을 더하거나 뺄 수 있다.
+     단독 항목은 예전처럼 낱개로 두되, [활동으로 묶기]로 언제든 승격할 수 있다. */
+  const body = items.length===0
+    ? `<div class="empty">항목이 없습니다. 아래 <b>[＋ 활동 추가]</b>로 큰 주제(수행평가·학급 활동)를 만들고 그 안에 채점 항목을 넣으세요.<br>단일 관찰 영역이면 <b>[＋ 항목 추가]</b>로 낱개만 만들어도 됩니다.</div>`
+    : groupItems(items).map(G=>{
+        if(G.solo && G.items.length===1){
+          const it = G.items[0];
+          return `<div class="grpwrap solo">
+            ${itemBox(it)}
+            <div class="grpfoot"><button class="btn ghost sm" onclick="promoteToGroup('${it.id}')">↳ 이 항목을 활동으로 묶기</button></div>
+          </div>`;
+        }
+        return `<div class="grpwrap">
+          <div class="grphead">
+            <span class="grpbadge">활동</span>
+            <input class="txt grpname" value="${esc(G.name)}" placeholder="활동(큰 주제) 이름 — 예: 혈액형 판정 수행평가, 1인1역 활동" oninput="onGroupName('${esc(G.key)}',this.value)">
+            <span class="grpn">채점항목 ${G.items.length}개</span>
+            <button class="xbtn" onclick="ungroup('${esc(G.key)}')" title="활동 묶음만 해제(항목은 남음)">묶음해제</button>
+          </div>
+          ${G.items.map(itemBox).join('')}
+          <div class="grpfoot"><button class="btn ghost sm" onclick="addItem('${esc(G.key)}')">＋ 이 활동에 채점항목 추가</button></div>
+        </div>`;
+      }).join('');
   document.getElementById('itemsBody').innerHTML = dl + bank + body;
 }
-function addItem(){
-  itemsFor(_itemsArea).push({ id:newItemId(), name:'', anchor:'', sentences:Array(10).fill('') });
+/* 채점항목 추가. gkey를 주면 그 활동 안에, 없으면 낱개 항목으로.
+   ★활동 안에 넣을 때는 그 활동의 마지막 항목 바로 뒤에 꽂는다 — 목록에서 활동이 흩어지지 않게. */
+function addItem(gkey){
+  const items = itemsFor(_itemsArea);
+  const src = gkey ? items.filter(x=> gkeyOf(x)===gkey) : [];
+  if(gkey && src.length){
+    const head = src[0];
+    const it = { id:newItemId(), name:'', anchor:head.anchor||'', grp:head.grp||'', base:head.base||'', sentences:Array(10).fill('') };
+    const last = items.lastIndexOf(src[src.length-1]);
+    items.splice(last+1, 0, it);
+  } else {
+    items.push({ id:newItemId(), name:'', anchor:'', grp:'', base:'', sentences:Array(10).fill('') });
+  }
   save(); renderItemsModal();
+}
+function newGroupKey(){ return 'g'+Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+/* ＋활동 추가 — 활동 하나 + 그 안의 빈 채점항목 1개를 만든다(빈 활동은 쓸모가 없다). */
+function addGroup(){
+  const g = newGroupKey();
+  itemsFor(_itemsArea).push({ id:newItemId(), name:'', anchor:'', grp:g, base:'', sentences:Array(10).fill('') });
+  save(); renderItemsModal();
+}
+/* 활동 이름은 소속 항목 전부의 base에 함께 쓴다(어느 항목이 지워져도 이름이 남게). */
+function onGroupName(gkey, v){
+  itemsFor(_itemsArea).forEach(it=>{ if(gkeyOf(it)===gkey) it.base = v; });
+  saveSoon();
+}
+/* 단독 항목 → 활동으로 승격. 항목명을 활동 이름으로 옮기고 항목 자신은 첫 채점항목이 된다.
+   ★id를 유지하므로 학생들이 이미 고른 levels가 전부 살아남는다. */
+function promoteToGroup(id){
+  const it = itemById(id); if(!it) return;
+  it.grp = newGroupKey();
+  it.base = it.name || '';
+  save(); renderItemsModal();
+}
+/* 묶음만 해제 — 항목·학생 선택은 그대로 두고 grp/base만 지운다(데이터 손실 없음). */
+function ungroup(gkey){
+  const src = itemsFor(_itemsArea).filter(x=> gkeyOf(x)===gkey);
+  if(!src.length) return;
+  confirmModal(`'${src[0].base||'이 활동'}' 묶음을 해제합니다.\n채점항목 ${src.length}개와 학생들이 고른 수준은 그대로 남고, 묶음 표시만 사라집니다.\n진행할까요?`, false, ()=>{
+    src.forEach(it=>{ if(!it.name && it.base) it.name = it.base; it.grp=''; it.base=''; });
+    save(); renderItemsModal();
+  });
 }
 function itemById(id){ return itemsFor(_itemsArea).find(x=>x && x.id===id) || null; }
 /* 이 항목의 수준을 실제로 골라 둔 학생 수 — 삭제 확인 모달에 보여 주기 위한 것 */
@@ -1087,7 +1239,11 @@ function importItemsFromSel(){
   confirmModal(`'${sel.value}'의 위계 항목 ${fresh.length}개를 현재 반으로 복사합니다.`
     + (skip ? `\n(이미 있는 ${skip}개는 건너뜁니다)` : '')
     + `\n(항목명·성취기준·위계 문장만 복사되고, 학생별 수준 선택은 각자 새로 고릅니다.)\n진행할까요?`, false, ()=>{
+    /* 활동 묶음은 가져오는 반 안에서 새 키로 다시 맺어 준다(원본 반의 grp와 충돌하지 않게). */
+    const gmap = Object.create(null);
+    fresh.forEach(it=>{ const g=it.grp||''; if(g && !gmap[g]) gmap[g]=newGroupKey(); });
     fresh.forEach(it=> dst.push({ id:newItemId(), name:it.name||'', anchor:it.anchor||'',
+      grp: it.grp ? gmap[it.grp] : '', base: it.base||'',
       sentences: Array.isArray(it.sentences) ? it.sentences.slice(0,10).map(withPeriod) : Array(10).fill('') }));
     save(); renderItemsModal();
     alert(`${fresh.length}개 가져옴` + (skip ? ` · ${skip}개 건너뜀(이미 있음)` : ''));
@@ -1327,11 +1483,7 @@ function buildUserPrompt(no, ak){
   const lvItems = itemsFor(ak);
   if(lvItems.some(it=> (ar.levels||{})[it.id] && (it.anchor||'').trim()))
     head += `\n[성취기준 반영] 위계 항목에 연결된 성취기준·단원의 도달 과정과 수준이 드러나게 서술(성취기준 코드·명은 본문에 직접 노출하지 말 것).`;
-  const lvTxt = lvItems.map(it=>{
-    const lv = (ar.levels||{})[it.id];
-    const sent = sentOf(it, lv);
-    return (lv && sent) ? `- ${it.name||'항목'}${(it.anchor||'').trim()?' [성취기준: '+it.anchor.trim()+']':''} — 수준 ${lv}/10: ${sent}` : null;
-  }).filter(Boolean).join("\n");
+  const lvTxt = levelBlocks(no, ak);   // 활동(큰 주제) 단위로 묶인 블록
   const coach = ar.coach || {q:[],phr:[]};
   const qaTxt = (coach.q||[]).filter(x=>x.answer && x.answer.trim())
     .map(x=>`- 문: ${x.question}\n  답: ${x.answer.trim()}`).join("\n");
@@ -1339,7 +1491,7 @@ function buildUserPrompt(no, ak){
   return `${head}
 
 [항목별 평가 수준(위계)]
-${lvTxt || '없음'}
+${lvTxt || '없음'}${lvTxt.includes('[활동]') ? '\n(같은 활동 안의 여러 항목은 한 활동의 여러 면이다. 항목을 나열하지 말고 그 활동에 대한 서술로 통합할 것.)' : ''}
 
 [누가기록]
 ${logs}
