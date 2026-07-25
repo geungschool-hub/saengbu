@@ -66,22 +66,17 @@ select.cls{padding:7px 10px;border:1.5px solid var(--blue-dark);border-radius:9p
 .btn.red{background:var(--red-accent);} .btn.gray{background:#7a8794;}
 .btn.ghost{background:var(--soft2);color:var(--blue-dark);border:1.5px solid #cfe0f0;}
 .btn.sm{padding:6px 10px;min-height:34px;font-size:12.5px;}
-.btn.block{width:100%;}
 .btn:disabled{opacity:.5;cursor:default;}
 .iconbtn{background:var(--soft2);color:var(--blue-dark);border:1.5px solid #cfe0f0;border-radius:9px;min-height:40px;padding:8px 11px;font-size:13px;cursor:pointer;}
 
-/* ---- student cards ---- */
-.card{background:var(--white);border-radius:13px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:9px;overflow:hidden;}
-.chead{display:flex;align-items:center;gap:10px;padding:13px 15px;cursor:pointer;user-select:none;}
+/* ---- student rows / dots ----
+   구 아코디언 카드 UI(.card/.chead/.chev/.cbody)와 소비처 없는 .btn.block 규칙 삭제 — 렌더러는 이미 master-detail(rowHTML/renderDetail)로 교체됨.
+   아래 .cno/.cname/.cdots/.cdot 은 rowHTML·dotsHTML·detail-head가 지금도 쓰므로 남긴다. */
 .cno{background:var(--blue-pastel);color:var(--blue-dark);font-weight:700;border-radius:8px;min-width:34px;height:30px;display:flex;align-items:center;justify-content:center;font-size:14px;padding:0 6px;}
 .cname{font-weight:700;font-size:15.5px;}
 .cdots{display:flex;gap:4px;margin-left:2px;}
 .cdot{width:9px;height:9px;border-radius:50%;background:#e2e8ef;}
 .cdot.has{background:var(--green-dark);}
-.chev{margin-left:auto;color:var(--muted);transition:transform .15s;font-size:13px;}
-.card.open .chev{transform:rotate(180deg);}
-.cbody{display:none;padding:2px 15px 18px;border-top:1px solid var(--divider);}
-.card.open .cbody{display:block;}
 
 /* ---- area tabs ---- */
 .tabs{display:flex;gap:5px;flex-wrap:wrap;margin:12px 0 10px;}
@@ -545,9 +540,17 @@ function normalizeState(){
     state.current = "2학년 7반";
   }
   if(!state.current || !state.classes[state.current]) state.current = Object.keys(state.classes)[0];
-  Object.values(state.classes).forEach(c=>{ if(!c.students) c.students = {};
-    ensureItems(c);
-    Object.values(c.students).forEach(s=> ensureAreas(s)); });
+  Object.values(state.classes).forEach(c=> normalizeClass(c));
+}
+/* 반 하나를 안전한 형태로 되돌린다(멱등). 밖에서 들어온 반은 전부 이 문을 통과시킨다.
+   ★같은 3줄이 normalizeState·mergeJSON(파일 병합)·handleHashImport(링크 명단) 세 곳에 복사돼 있던 것을 모았다.
+   앞으로 반 단위로 보장할 항목이 늘면 여기 한 곳만 고치면 된다.
+   ★순서 주의: 정규화를 마친 뒤 state.classes에 꽂는다(호출부가 normalizeClass(...) 결과를 대입하는 이유). */
+function normalizeClass(c){
+  if(!c.students) c.students = {};
+  ensureItems(c);
+  Object.values(c.students).forEach(s=> ensureAreas(s));
+  return c;
 }
 /* 항목 1개를 안전한 형태로 되돌린다(멱등).
    백업 파일·다른 앱 링크로 들어온 항목은 형태가 깨져 있을 수 있는데,
@@ -691,10 +694,7 @@ function applyRoster(){
     const names = removed.map(no=>`${no} ${old[no].name||''}`.trim()).join(', ');
     confirmModal(`명단에서 빠진 학생 ${removed.length}명의 모든 기록이 함께 삭제됩니다.\n누가기록·참고자료·초안·위계 수준 선택·보강 문답이 전부 사라지며 되돌릴 수 없습니다.\n삭제: ${names}\n\n진행할까요?`, true, ()=>{
       // 되돌릴 지점부터 남긴다. 스냅샷을 못 만들면 삭제를 진행하지 않는다.
-      if(!autoBackup(true, '명단 재적용 직전')){
-        alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
-        return;
-      }
+      if(!ensureUndoPoint('명단 재적용 직전')) return;
       doApply();
     });
   } else doApply();
@@ -1101,10 +1101,8 @@ function delItem(id){
   confirmModal(`'${it.name||'이름 없는 항목'}' 항목을 삭제합니다.`
     + (used ? `\n이 항목의 수준을 골라 둔 학생 ${used}명의 선택도 함께 지워집니다.` : `\n(아직 이 항목의 수준을 고른 학생은 없습니다.)`)
     + `\n되돌릴 수 없습니다. 진행할까요?`, true, ()=>{
-    if(used && !autoBackup(true, '항목 삭제 직전')){
-      alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
-      return;
-    }
+    // used가 0이면 단락평가로 백업을 만들지 않는다(수준 고른 학생이 없을 때의 기존 동작 그대로).
+    if(used && !ensureUndoPoint('항목 삭제 직전')) return;
     items.splice(k,1);
     Object.values(cur().students).forEach(s=>{
       const ar = s.areas && s.areas[_itemsArea];
@@ -1530,23 +1528,29 @@ function fallbackCopy(txt, done){
   const ta=document.createElement('textarea'); ta.value=txt; document.body.appendChild(ta); ta.select();
   try{ document.execCommand('copy'); done(); }catch(_){} document.body.removeChild(ta);
 }
-function exportJSON(){
+/* 밖으로 나가는 사본 — API 키는 절대 포함하지 않는다.
+   ★state에 새 비밀값이 생기면 여기 한 곳만 고치면 된다(파일 백업 exportJSON·자동백업 autoBackup 공통 진입점).
+   ★단 downloadBackup은 예외 — 자동백업 레코드(b.data)는 저장될 때 이미 이 함수를 거친 사본이다.
+   ★save()의 localStorage 저장에는 쓰지 말 것: 거기엔 apiKey가 남아야 새로고침 후에도 키가 유지된다. */
+function dumpState(){
   const dump = JSON.parse(JSON.stringify(state));
-  if(dump.settings) delete dump.settings.apiKey;   // API 키는 백업 파일에 포함하지 않음
-  const blob = new Blob([JSON.stringify(dump,null,2)], {type:'application/json'});
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `생기부통합_백업_${todayStr()}.json`; a.click(); URL.revokeObjectURL(a.href);
+  if(dump.settings) delete dump.settings.apiKey;
+  return dump;
 }
+/* JSON 객체를 파일로 내려받는 공통 절차(백업 내려받기·자동백업 파일이 같이 쓴다) */
+function downloadJSON(obj, filename){
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = filename; a.click(); URL.revokeObjectURL(a.href);
+}
+function exportJSON(){ downloadJSON(dumpState(), `생기부통합_백업_${todayStr()}.json`); }
 function importJSON(e){
   const f = e.target.files[0]; if(!f) return; const r = new FileReader();
   r.onload = ()=>{ try{
     const s = JSON.parse(r.result); if(!s.classes) throw 0;
     confirmModal('백업 파일로 현재 데이터를 전부 덮어씁니다.\n(현재 데이터는 자동백업에 먼저 저장한 뒤 교체 — 실수해도 ⏱자동백업에서 되살릴 수 있음)\n진행할까요?', true, ()=>{
       // 덮어쓰기 전 현재 상태 강제 스냅샷(왔다갔다 안전벨트). 실패하면 되돌릴 방법이 없으므로 복원을 중단한다.
-      if(!autoBackup(true, '파일 복원 직전')){
-        alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n지금 복원하면 현재 데이터를 되살릴 수 없어 중단했습니다.\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
-        return;
-      }
+      if(!ensureUndoPoint('파일 복원 직전', UNDO_BLOCK)) return;
       const keepKey = state.settings ? state.settings.apiKey : '';
       state = s; if(!state.settings) state.settings={apiKey:'',model:'claude-opus-4-8'};
       if(!state.settings.apiKey && keepKey) state.settings.apiKey = keepKey;
@@ -1566,9 +1570,7 @@ function mergeJSON(e){
     const msg = `병합 복원 — 새 반 ${toAdd.length}개를 추가합니다.\n추가: ${toAdd.join(', ')}`
       + (dup.length?`\n\n이미 있는 반 ${dup.length}개(${dup.join(', ')})는 그대로 둡니다.`:'') + '\n\n진행할까요?';
     confirmModal(msg, false, ()=>{
-      toAdd.forEach(n=>{ const c=s.classes[n]; if(!c.students) c.students={};
-        ensureItems(c);
-        Object.values(c.students).forEach(st=>ensureAreas(st)); state.classes[n]=c; });
+      toAdd.forEach(n=>{ state.classes[n] = normalizeClass(s.classes[n]); });
       state.current = toAdd[0]; save(); openNo=null; renderAll();
       alert(`완료 — 새 반 ${toAdd.length}개를 추가했습니다.`);
     });
@@ -1584,8 +1586,7 @@ function autoBackup(force, note, pin){
     const arr = autoBkList();
     const today = todayStr();
     if(!force && arr.length && arr[arr.length-1].date===today) return true;   // 하루 1회 (force면 예외)
-    const dump = JSON.parse(JSON.stringify(state));
-    if(dump.settings) delete dump.settings.apiKey;             // API 키 제외
+    const dump = dumpState();                                  // API 키 제외(공통 규칙은 dumpState 한 곳에)
     const rec = { date:today, at:new Date().toLocaleString('ko-KR'), data:dump };
     if(note) rec.note = note;
     if(pin) rec.pin = true;                                    // 고정 백업 — 롤링에서 제외
@@ -1595,6 +1596,17 @@ function autoBackup(force, note, pin){
     localStorage.setItem(BK_KEY, JSON.stringify(arr));
     return true;
   }catch(e){ return false; }   // 저장공간 부족 등 — 호출한 쪽이 알아야 한다
+}
+/* 위험한 작업(명단 재적용·항목 삭제·파일 복원·자동백업 복원) 직전에 되돌릴 지점을 먼저 만든다.
+   실패하면 false — 호출부는 즉시 중단해야 한다.
+   ★똑같은 경고문이 네 군데에 손으로 복사돼 있던 것을 여기로 모았다(문구는 글자 그대로 보존).
+   복원 계열은 UNDO_BLOCK 한 문장이 더 붙는다. */
+const UNDO_BLOCK = '지금 복원하면 현재 데이터를 되살릴 수 없어 중단했습니다.\n';
+function ensureUndoPoint(note, extra){
+  if(autoBackup(true, note)) return true;
+  alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n'
+    + (extra||'') + '먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
+  return false;
 }
 function openBackups(){
   const arr = autoBkList();
@@ -1618,18 +1630,14 @@ function openBackups(){
 function closeBackups(){ document.getElementById('bkBack').classList.remove('on'); }
 function downloadBackup(idx){
   const b = autoBkList()[idx]; if(!b) return;
-  const blob = new Blob([JSON.stringify(b.data,null,2)], {type:'application/json'});
-  const a = document.createElement('a'); a.href=URL.createObjectURL(blob);
-  a.download = `생기부통합_자동백업_${b.date}.json`; a.click(); URL.revokeObjectURL(a.href);
+  // b.data는 autoBackup이 저장할 때 이미 키를 뺀 사본 → dumpState를 다시 거치지 않는다(현재 동작 유지).
+  downloadJSON(b.data, `생기부통합_자동백업_${b.date}.json`);
 }
 function restoreBackup(idx){
   const b = autoBkList()[idx]; if(!b) return;
   confirmModal(`${b.date} 자동백업으로 되돌립니다.\n지금 데이터는 이 복원 직전 상태로 자동백업에 한 번 더 저장된 뒤 교체됩니다. 진행할까요?`, true, ()=>{
     // 복원 직전 현재 상태 강제 스냅샷. 실패하면 지금 데이터를 되살릴 길이 없으므로 중단한다.
-    if(!autoBackup(true, '자동백업 복원 직전')){
-      alert('되돌릴 백업을 만들지 못했습니다(저장 공간 부족으로 보입니다).\n지금 복원하면 현재 데이터를 되살릴 수 없어 중단했습니다.\n먼저 [⬇ 백업]으로 파일을 저장한 뒤 다시 시도하세요.');
-      return;
-    }
+    if(!ensureUndoPoint('자동백업 복원 직전', UNDO_BLOCK)) return;
     const keepKey = state.settings ? state.settings.apiKey : '';
     state = JSON.parse(JSON.stringify(b.data));
     if(!state.settings) state.settings={apiKey:'',model:'claude-opus-4-8'};
@@ -1711,12 +1719,7 @@ function handleHashImport(){
   const msg = `링크로 전달된 명단을 불러옵니다.\n\n추가할 반 ${target.length}개 (학생 ${total}명):\n${target.join(', ')}`
     + (dup.length?`\n\n이미 데이터가 있는 반(${dup.join(', ')})은 그대로 둡니다.`:'') + `\n\n진행할까요?`;
   confirmModal(msg, false, ()=>{
-    target.forEach(n=>{
-      const c = incoming.classes[n]; if(!c.students) c.students = {};
-      ensureItems(c);
-      Object.values(c.students).forEach(st=>ensureAreas(st));
-      state.classes[n] = c;
-    });
+    target.forEach(n=>{ state.classes[n] = normalizeClass(incoming.classes[n]); });
     if(incoming.current && state.classes[incoming.current]) state.current = incoming.current;
     normalizeState(); save(); openNo=null; renderAll();
   });
