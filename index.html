@@ -1202,14 +1202,17 @@ function dedupeVerb(text){
 }
 /* 활동 하나를 한 문장으로 — 최고·최저 밴드만 노출하고 중간은 생략한다(글자수 방어). */
 function synthGroupText(G, ar){
-  const ev   = evForm((ar.ev||{})[G.key]);
-  const lead = (ev && !ev.nominal) ? ev.txt : (G.name || '활동');
-  const pre  = (ev &&  ev.nominal) ? (ev.txt + '. ') : '';
+  const ev = evForm((ar.ev||{})[G.key]);
+  /* ★활동명은 문장에 넣지 않는다 — 도달한 수행 수준만 서술해도 충분하고,
+     활동명이 들어가면 활동 수만큼 반복돼 글자수만 먹는다.
+     도입 소재는 '이 학생만의 장면(ev)'이 있을 때만 쓴다(그건 활동명이 아니라 개인화 재료다). */
+  const lead = (ev && !ev.nominal) ? (ev.txt + '에서 ') : '';
+  const pre  = (ev &&  ev.nominal) ? (ev.txt + '. ')   : '';
   let body;
   if(G.lo){
     const dem = demote(G.lo.sn);
-    body = dem ? `${lead}에서 ${dem}, ${G.hi.sn}` : `${lead}에서 ${G.lo.sn} ${G.hi.sn}`;
-  } else body = `${lead}에서 ${G.hi.sn}`;
+    body = dem ? `${lead}${dem}, ${G.hi.sn}` : `${lead}${G.lo.sn} ${G.hi.sn}`;
+  } else body = `${lead}${G.hi.sn}`;
   return pre + body;
 }
 /* 활동별 1문장을 이어 붙여 초안 후보를 만든다.
