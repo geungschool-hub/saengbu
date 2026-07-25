@@ -179,9 +179,9 @@ input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
 
 /* ---- 위계 평가 ---- */
 .lvrow{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap;padding:var(--sp-2) var(--sp-1);border-bottom:1px dashed var(--brd2);}
-.lvname{font-size:var(--fs-md);font-weight:700;color:var(--blue-dark);min-width:90px;}
-select.lvsel{padding:var(--sp-2);border:1.5px solid var(--brd);border-radius:var(--r-sm);background:var(--surface);max-width:100%;min-height:44px;}
-.lvsent{flex:1 1 100%;font-size:var(--fs-md);line-height:1.55;}
+.lvname{font-size:var(--fs-md);font-weight:700;color:var(--blue-dark);min-width:84px;flex:0 0 auto;}
+select.lvsel{flex:1 1 260px;min-width:0;width:100%;padding:var(--sp-2);border:1.5px solid var(--brd);border-radius:var(--r-sm);background:var(--surface);min-height:44px;font-size:var(--fs-md);}
+.lvsent{flex:1 1 100%;font-size:var(--fs-md);line-height:1.6;color:var(--text-main);background:var(--soft);border-radius:var(--r-sm);padding:var(--sp-1) var(--sp-2);}
 .lvhint{color:var(--muted);font-size:var(--fs-sm);}
 /* ---- 활동(큰 주제) 묶음 카드 — 그 안에 채점 항목별 위계 줄이 들어간다 ---- */
 .lvgrp{border:1px solid var(--brd3);border-radius:var(--r-md);padding:var(--sp-2) var(--sp-3) var(--sp-1);margin-bottom:var(--sp-2);background:var(--soft);}
@@ -993,7 +993,7 @@ function levelSectionHTML(no, ak){
       const sent = sentOf(it, lv);
       const opts = Array.from({length:10},(_,i)=>i+1).map(n=>{
         const sn = sentOf(it, n);
-        const label = n + (sn ? '. '+sn.slice(0,34)+(sn.length>34?'…':'') : ' (미입력)');
+        const label = n + (sn ? '. '+sn : ' (미입력)');   // ★자르지 않는다 — 문장 전체를 보고 골라야 한다
         return `<option value="${n}"${lv==n?' selected':''}>${esc(label)}</option>`;
       }).join('');
       return `<div class="lvrow">
