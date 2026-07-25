@@ -888,9 +888,9 @@ function levelSectionHTML(no, ak){
   } else {
     inner = items.map(it=>{
       const lv = (ar.levels||{})[it.id] || '';
-      const sent = lv ? (it.sentences[lv-1]||'') : '';
+      const sent = sentOf(it, lv);
       const opts = Array.from({length:10},(_,i)=>i+1).map(n=>{
-        const sn = (it.sentences[n-1]||'').trim();
+        const sn = sentOf(it, n);
         const label = n + (sn ? '. '+sn.slice(0,34)+(sn.length>34?'…':'') : ' (미입력)');
         return `<option value="${n}"${lv==n?' selected':''}>${esc(label)}</option>`;
       }).join('');
@@ -951,6 +951,25 @@ function setField(no, ak, key, val){ stu(no).areas[ak][key] = val; saveSoon(); }
 
 /* ---------------- 위계 평가 ---------------- */
 function itemsFor(ak){ ensureItems(cur()); return cur().items[ak]; }
+/* 문장 끝에 마침표를 보장한다. 이미 종결 부호로 끝나면 그대로 둔다.
+   끝에 붙은 닫는 괄호·따옴표는 부호로 보지 않고 그 앞 글자를 본다. */
+function withPeriod(s){
+  s = String(s==null ? '' : s).trim();
+  if(!s) return '';
+  if(/[.。!?…！？][)\]）】'"”’」』]*$/.test(s)) return s;
+  return s + '.';
+}
+/* ★위계 문장을 읽는 단 하나의 입구.
+   화면·조합·프롬프트가 전부 이걸 거치므로, 교사가 마침표 없이 적었거나
+   옛 데이터·다른 반에서 가져온 문장이어도 항상 마침표로 끝난 문장이 나간다.
+   형태가 깨진 항목(sentences 없음)은 예외 대신 빈 문자열을 돌려준다. */
+function sentOf(it, lv){
+  if(!it || !lv) return '';
+  const n = parseInt(lv, 10);
+  if(!(n>=1 && n<=10)) return '';
+  if(!Array.isArray(it.sentences)) return '';
+  return withPeriod(it.sentences[n-1]);
+}
 function setLevel(no, ak, itemId, val){
   const ar = stu(no).areas[ak];
   if(!ar.levels) ar.levels = {};
@@ -959,19 +978,19 @@ function setLevel(no, ak, itemId, val){
   const it = itemsFor(ak).find(x=>x.id===itemId);
   const el = document.getElementById(`lvsent-${no}-${itemId}`);
   if(el && it){
-    const sent = val ? (it.sentences[val-1]||'') : '';
+    const sent = sentOf(it, val);
     el.innerHTML = sent ? esc(sent) : '<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>';
   }
 }
 function composedLevels(no, ak){
   const ar = stu(no).areas[ak];
   return itemsFor(ak)
-    .map(it=>{ const lv=(ar.levels||{})[it.id]; return lv ? (it.sentences[lv-1]||'').trim() : ''; })
+    .map(it=> sentOf(it, (ar.levels||{})[it.id]))
     .filter(Boolean).join(' ');
 }
 function hasLevels(no, ak){
   const ar = stu(no).areas[ak];
-  return itemsFor(ak).some(it=> (ar.levels||{})[it.id] && (it.sentences[(ar.levels||{})[it.id]-1]||'').trim());
+  return itemsFor(ak).some(it=> !!sentOf(it, (ar.levels||{})[it.id]));
 }
 function composeLevels(no, ak){
   const txt = composedLevels(no, ak);
@@ -1034,7 +1053,7 @@ function renderItemsModal(){
           ${Array.from({length:10},(_,lv)=>`
             <div class="lvledit">
               <span class="lvbadge" style="background:${LV_COLORS[lv]}">${lv+1}</span>
-              <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent('${it.id}',${lv},this.value)">${esc(it.sentences[lv]||'')}</textarea>
+              <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent('${it.id}',${lv},this.value)" onblur="onItemSentBlur('${it.id}',${lv},this)">${esc(it.sentences[lv]||'')}</textarea>
             </div>`).join('')}
         </div>
       </div>`).join('');
@@ -1069,7 +1088,7 @@ function importItemsFromSel(){
     + (skip ? `\n(이미 있는 ${skip}개는 건너뜁니다)` : '')
     + `\n(항목명·성취기준·위계 문장만 복사되고, 학생별 수준 선택은 각자 새로 고릅니다.)\n진행할까요?`, false, ()=>{
     fresh.forEach(it=> dst.push({ id:newItemId(), name:it.name||'', anchor:it.anchor||'',
-      sentences: Array.isArray(it.sentences) ? it.sentences.slice(0,10) : Array(10).fill('') }));
+      sentences: Array.isArray(it.sentences) ? it.sentences.slice(0,10).map(withPeriod) : Array(10).fill('') }));
     save(); renderItemsModal();
     alert(`${fresh.length}개 가져옴` + (skip ? ` · ${skip}개 건너뜀(이미 있음)` : ''));
   });
@@ -1101,6 +1120,18 @@ function onItemSent(id, lv, v){
   if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
   it.sentences[lv] = v; saveSoon();
 }
+/* 입력을 마친 순간(포커스 아웃)에 마침표를 붙여 저장 값과 화면을 맞춘다.
+   입력 중에 붙이면 커서가 튀므로 blur에서만 손댄다. */
+function onItemSentBlur(id, lv, el){
+  const it=itemById(id); if(!it) return;
+  if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
+  const fixed = withPeriod(it.sentences[lv]);
+  if(fixed !== it.sentences[lv]){
+    it.sentences[lv] = fixed;
+    if(el) el.value = fixed;
+    saveSoon();
+  }
+}
 function toggleItemEdit(id){
   const b = document.getElementById('ibody-'+id); if(!b) return;
   b.classList.toggle('hidden');
@@ -1112,7 +1143,7 @@ function autoFillItem(id){
   const name = (it.name||'').trim();
   if(!name){ alert('항목명을 먼저 입력하세요.'); return; }
   const doFill = ()=>{
-    it.sentences = templatesFor(_itemsArea, name).map(fn=>fn(name));
+    it.sentences = templatesFor(_itemsArea, name).map(fn=>withPeriod(fn(name)));
     save(); renderItemsModal();
     const b = document.getElementById('ibody-'+id); if(b) b.classList.remove('hidden');
     const t = document.getElementById('itoggle-'+id); if(t) t.textContent='▲';
@@ -1265,6 +1296,7 @@ const SYSTEM_PROMPT = `당신은 대한민국 고등학교 학교생활기록부
 
 [문체 규정]
 - 평어체·명사형 종결: 모든 문장을 '~함', '~음', '~임', '~보임', '~드러냄'처럼 받침 ㅁ(명사형)으로 끝낸다.
+- ★모든 문장은 반드시 마침표(.)로 끝맺는다. 마지막 문장도 예외 없이 마침표로 닫는다. (예: '…재측정을 제안함.')
 - 주어 생략(주어=해당 학생). '학생은~', '~했습니다' 같은 경어체·3인칭 명시 금지.
 - 관찰자(교사) 시점. 학생의 내면(감정·생각·결심)을 1인칭으로 직접 표현 금지.
   · '깨달았음/느꼈음/알게 됨/배우게 됨' → '~에 대한 소감을 기록함', '~에 대한 생각을 정리함'으로 외부화.
@@ -1283,7 +1315,8 @@ const SYSTEM_PROMPT = `당신은 대한민국 고등학교 학교생활기록부
 
 [출력 형식]
 - 완성된 생기부 문구 본문만 출력한다. 설명·머리말·따옴표·코드블록·'초안:' 같은 라벨을 붙이지 않는다.
-- 지정된 영역의 글자수(공백 포함)를 넘지 않게 한다.`;
+- 지정된 영역의 글자수(공백 포함)를 넘지 않게 한다.
+- 마지막 글자는 마침표(.)여야 한다.`;
 
 function buildUserPrompt(no, ak){
   const s = stu(no); const a = AREAS.find(x=>x.k===ak); const ar = s.areas[ak];
@@ -1298,7 +1331,7 @@ function buildUserPrompt(no, ak){
     head += `\n[성취기준 반영] 위계 항목에 연결된 성취기준·단원의 도달 과정과 수준이 드러나게 서술(성취기준 코드·명은 본문에 직접 노출하지 말 것).`;
   const lvTxt = lvItems.map(it=>{
     const lv = (ar.levels||{})[it.id];
-    const sent = lv ? (it.sentences[lv-1]||'').trim() : '';
+    const sent = sentOf(it, lv);
     return (lv && sent) ? `- ${it.name||'항목'}${(it.anchor||'').trim()?' [성취기준: '+it.anchor.trim()+']':''} — 수준 ${lv}/10: ${sent}` : null;
   }).filter(Boolean).join("\n");
   const coach = ar.coach || {q:[],phr:[]};
@@ -1368,7 +1401,8 @@ async function generate(no, ak){
     let out = (data.content||[]).filter(b=>b.type==='text').map(b=>b.text).join("").trim();
     out = out.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
     out = out.replace(/^["'“「]+|["'”」]+$/g,'').trim();
-    ar.draft = out; save();                                  // 상태부터 저장(화면 이동해도 유실 없음)
+    out = withPeriod(out);                                   // 모델이 마침표를 빠뜨려도 보장
+    ar.draft = out; save();                                // 상태부터 저장(화면 이동해도 유실 없음)
     if(openNo===no && openArea===ak){                        // 지금 이 패널을 보고 있을 때만 DOM 반영
       const dt = document.getElementById('draft-'+no); if(dt) dt.value = out;
       refreshMeter(no, ak);
@@ -1395,7 +1429,7 @@ const COACH_SYSTEM = `당신은 대한민국 고등학교 생기부(세특) 작�
 function buildCoachPrompt(no, ak){
   const s = stu(no); const a = AREAS.find(x=>x.k===ak); const ar = s.areas[ak];
   const logs = (ar.logs||[]).map(lg=>`- ${lg.text}`).join("\n") || "(없음)";
-  const lv = itemsFor(ak).map(it=>{ const l=(ar.levels||{})[it.id]; const sn=l?(it.sentences[l-1]||'').trim():''; return (l&&sn)?`- ${it.name||'항목'}: ${sn}`:null; }).filter(Boolean).join("\n") || "(없음)";
+  const lv = itemsFor(ak).map(it=>{ const sn=sentOf(it,(ar.levels||{})[it.id]); return sn?`- ${it.name||'항목'}: ${sn}`:null; }).filter(Boolean).join("\n") || "(없음)";
   let ctx = `[영역] ${areaTitleOf(ak,a)}`;
   if(ak==='subject' && subjName()) ctx += `\n[과목] ${subjName()}`;
   if(ak==='career' && ar.hope) ctx += `\n[진로 희망분야] ${ar.hope}`;
@@ -1646,7 +1680,7 @@ function toggleTheme(){
 /* ---------------- utils ---------------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
 function todayStr(){ const d=new Date(); const p=n=>String(n).padStart(2,'0'); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
-/* 이름 매칭 키 — 공백 무시(엄밀), 끝 괄호 표기 무시(느슨: '배연재(공동)' ↔ '배연재') */
+/* 이름 매칭 키 — 공백 무시(엄밀), 끝 괄호 표기 무시(느슨: '○○○(공동)' ↔ '○○○') */
 function nameKey(s){ return String(s==null?'':s).replace(/\s+/g,''); }
 function nameBase(s){ return nameKey(s).replace(/([（(\[][^）)\]]*[）)\]])+$/,''); }   // 끝에 붙은 (공동)·[전입] 등 표기 제거
 
