@@ -177,7 +177,13 @@ input.txt:focus,textarea.txt:focus{outline:none;border-color:var(--blue-dark);}
 .modal label{display:block;font-size:var(--fs-sm);color:var(--text-light);margin:var(--sp-3) 0 var(--sp-1);}
 .note{font-size:var(--fs-sm);color:var(--text-light);background:var(--soft);border:1px solid var(--brd2);border-radius:var(--r-md);padding:var(--sp-2) var(--sp-3);line-height:1.55;}
 
-/* ---- 위계 평가 ---- */
+/* 칼럼 머리글 — 가운데(재료)와 오른쪽(결과물)이 무슨 칸인지 한 줄로 알려 준다.
+   섹션이 여럿이라 처음 여는 사람은 어디부터 손대야 할지 모른다. */
+.colhead{margin:0 0 var(--sp-3);padding:0 var(--sp-1);}
+.colhead b{display:block;font-size:var(--fs-base);color:var(--text-main);letter-spacing:-.2px;}
+.colhead span{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px;line-height:1.5;}
+
+/* ---- 활동 수준 평가 ---- */
 .lvrow{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap;padding:var(--sp-2) var(--sp-1);border-bottom:1px dashed var(--brd2);}
 .lvname{font-size:var(--fs-md);font-weight:700;color:var(--blue-dark);min-width:84px;flex:0 0 auto;}
 select.lvsel{flex:1 1 260px;min-width:0;width:100%;padding:var(--sp-2);border:1.5px solid var(--brd);border-radius:var(--r-sm);background:var(--surface);min-height:44px;font-size:var(--fs-md);}
@@ -891,19 +897,22 @@ function panelHTML(no){
     return `<button class="tab ${a.k===openArea?'on '+a.color:''}" onclick="setArea(${no},'${a.k}')">${esc(lbl)}${has?'<span class="tdot"></span>':''}</button>`;
   }).join("")}</div>`;
   return tabs + `<div class="editor-grid">
-    <div class="editor-main">${areaPanel(no, openArea)}</div>
+    <div class="editor-main">
+      <div class="colhead"><b>📚 재료 모으기</b><span>있는 것만 채우면 됩니다. 많을수록 문구가 구체적이 됩니다.</span></div>
+      ${areaPanel(no, openArea)}</div>
     <aside class="editor-ref">${refPanel(no, openArea)}</aside>
   </div>`;
 }
 function refPanel(no, ak){
   const a = AREAS.find(x=>x.k===ak);
   const lbl = ak==='subject' ? (subjName()||'교과세특') : a.short;
-  return `<div class="ref-card">
+  return `<div class="colhead"><b>✍️ 문구 작성</b><span>왼쪽 재료를 보며 여기에서 완성합니다.</span></div>
+    <div class="ref-card">
       <div class="ref-title">📏 ${esc(lbl)} · 최대 ${a.limit}자</div>
       <div class="ref-hint">${esc(AREA_HINT[ak]||'')}</div>
     </div>
     <div class="ref-card">
-      <div class="ref-title">🔎 실시간 검증</div>
+      <div class="ref-title">🔎 자동 검사</div>
       <div class="chips" id="lint-${no}"><span class="chip good" style="opacity:.5">초안을 입력하면 자동 검사합니다.</span></div>
     </div>
     ${draftSectionHTML(no, ak)}`;
@@ -925,7 +934,7 @@ function areaPanel(no, ak){
   ${extra}
   ${levelSectionHTML(no, ak)}
   <div class="sec">
-    <h3>📝 누가기록 <span class="hint">수업·활동 중 관찰 메모를 수시로</span></h3>
+    <h3>📝 관찰 기록 <span class="hint">수업·활동 중 본 것을 그때그때 메모 (NEIS 누가기록)</span></h3>
     <div class="logadd">
       <textarea class="txt" id="logNew-${no}" rows="2" placeholder="관찰 내용을 입력 (예: 삼투 실험에서 변인 통제를 스스로 점검하며 재실험을 제안함)"></textarea>
       <div class="lr">
@@ -942,13 +951,13 @@ function areaPanel(no, ak){
   </div>
 
   <div class="sec">
-    <h3>📂 참고자료 붙여넣기 <span class="hint">기존 메모·수행평가 결과 등</span></h3>
+    <h3>📂 참고 자료 <span class="hint">수행평가 결과·기존 메모 붙여넣기</span></h3>
     <textarea class="txt" rows="3" placeholder="여기에 기존 메모나 수행평가 결과를 붙여넣으면 초안 생성에 함께 반영됩니다."
       oninput="setField(${no},'${ak}','paste',this.value)">${esc(ar.paste||'')}</textarea>
   </div>
 
   <div class="sec">
-    <h3>🤔 내용 보강 <span class="hint">질문에 답하면 초안 재료가 됩니다</span></h3>
+    <h3>🤔 AI에게 물어보기 <span class="hint">빠진 내용을 질문으로 채우기</span></h3>
     <div class="genrow">
       <button class="btn ghost" id="coachBtn-${no}" onclick="genCoach(${no},'${ak}')">🤔 보강 질문 받기</button>
     </div>
@@ -965,7 +974,7 @@ function draftSectionHTML(no, ak){
   const a = AREAS.find(x=>x.k===ak), ar = stu(no).areas[ak];
   const aTitle = areaTitleOf(ak, a);
   return `<div class="sec draft-sec">
-    <h3>✨ ${esc(aTitle)} 초안</h3>
+    <h3>✨ ${esc(aTitle)} <span class="hint">NEIS에 넣을 최종 문구</span></h3>
     <div class="genrow">
       <button class="btn ${a.color==='green'?'green':a.color==='amber'?'amber':''}" id="genBtn-${no}" onclick="generate(${no},'${ak}')">🤖 AI 초안 생성</button>
       <button class="btn ghost" onclick="copyPrompt(${no},'${ak}')">📋 프롬프트만 복사</button>
@@ -1035,7 +1044,7 @@ function levelSectionHTML(no, ak){
     })();
   }
   return `<div class="sec">
-    <h3>📐 위계 평가 <span class="hint">항목별 수준 선택 → 문장 자동</span>
+    <h3>📐 활동 수준 평가 <span class="hint">활동별로 수준을 고르면 문장이 만들어집니다</span>
       <span style="margin-left:auto"><button class="btn ghost sm" onclick="openItems('${ak}')">⚙ 항목 관리</button></span></h3>
     ${inner}
   </div>`;
@@ -1816,7 +1825,7 @@ async function generate(no, ak){
   if(!key){ setGenMsg(no,'err','⚙️ 설정에서 API 키를 먼저 입력하세요. (또는 [프롬프트만 복사]로 외부 AI 사용)'); openSettings(); return; }
   const s = stu(no); const ar = s.areas[ak];
   if((!ar.logs || ar.logs.length===0) && !(ar.paste||'').trim() && !hasLevels(no, ak) && !evBlocks(no, ak)){
-    setGenMsg(no,'err','누가기록·참고자료·위계 평가·특이사항 중 하나는 먼저 입력하세요. (없는 내용은 생성하지 않습니다.)'); return;
+    setGenMsg(no,'err','관찰 기록·참고 자료·활동 수준·특이사항 중 하나는 먼저 입력하세요. (없는 내용은 생성하지 않습니다.)'); return;
   }
   if(_gen[no]) return;               // 같은 학생 중복 생성 방지
   _gen[no] = true;
