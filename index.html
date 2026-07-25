@@ -159,6 +159,19 @@ select.lvsel{padding:8px;border:1.5px solid var(--brd);border-radius:8px;backgro
 .lvgcount{margin-left:auto;font-size:11px;font-weight:700;color:var(--muted);background:var(--soft2);border-radius:8px;padding:2px 7px;}
 .lvgcount.full{color:var(--green-dark);}
 .lvgrp .lvrow:last-child{border-bottom:0;}
+.lvev{margin-top:7px;}
+.lvev input{font-size:16px;min-height:44px;}          /* iOS 자동확대 방지 */
+.lvsynth{margin-top:11px;}
+.lvsprev{border-left:3px solid var(--green-dark);background:var(--soft2);border-radius:0 8px 8px 0;
+  padding:9px 11px;font-size:13px;line-height:1.75;white-space:pre-wrap;}
+.lvsmeta{margin-top:5px;font-size:11.5px;color:var(--muted);}
+.lvsmeta .warn{color:var(--amber);}
+/* 항목 모달 — 관찰 관점(차원) 선택 */
+.itemdim{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 2px;}
+.dimlbl{font-size:11.5px;font-weight:700;color:var(--blue-dark);}
+.dimsel{font-weight:500;min-height:36px;}
+.dimhint{font-size:11px;color:var(--muted);flex:1 1 160px;}
+.revchk{font-size:11.5px;color:var(--text-light);display:flex;align-items:center;gap:4px;}
 .itembox{border:1px solid var(--brd3);border-radius:10px;padding:10px;margin-bottom:9px;background:var(--surface);}
 .itemhead{display:flex;gap:7px;align-items:center;flex-wrap:wrap;}
 .lvledit{display:flex;gap:7px;align-items:flex-start;margin-top:6px;}
@@ -593,11 +606,16 @@ function normItem(it){
      그럴 때는 활동 이름(base)으로 승격해서 머리글에 보이게 한다.
      자동 생성 키(g1a2b3… / rb:…)는 이름이 아니므로 제외 — 그때는 교사가 직접 적는다. */
   if(it.grp && !it.base && !/^(rb:|g[0-9a-z]{6,})/.test(it.grp)) it.base = it.grp;
+  /* 차원 — 모르는 키는 지우지 않고 '단독 취급'(빈 문자열)으로 내린다. */
+  if(typeof it.dim !== 'string' || !DIM_LIB[it.dim]) it.dim = '';
   if(!Array.isArray(it.sentences)) it.sentences = Array(10).fill('');
   else {
     it.sentences = it.sentences.slice(0,10).map(s=> typeof s==='string' ? s : '');
     while(it.sentences.length < 10) it.sentences.push('');
   }
+  /* 검수 여부 — 손으로 쓴 문장이 하나라도 있으면 교사가 이미 본 것으로 간주(구버전 무손실).
+     ★sentences 정규화가 끝난 뒤에 계산해야 한다. */
+  if(typeof it.rev !== 'boolean') it.rev = it.sentences.some(s=> s && s.trim());
   return it;
 }
 function ensureItems(c){
@@ -947,10 +965,23 @@ function levelSectionHTML(no, ak){
           <span class="lvgcount${done===G.items.length?' full':''}">${done}/${G.items.length}</span>
         </div>
         ${G.items.map(rowHTML).join('')}
+        <div class="lvev"><input class="txt" value="${esc((ar.ev||{})[G.key]||'')}"
+          placeholder="🏷 이 학생만의 장면 (선택) — 명사구 또는 ~함 문장"
+          oninput="setEv(${no},'${ak}','${esc(G.key)}',this.value)"></div>
       </div>`;
-    }).join('') + `<div style="margin-top:9px;">
-      <button class="btn ghost sm" onclick="composeLevels(${no},'${ak}')">⤵ 선택한 위계 문장 조합을 초안에 넣기</button>
-    </div>`;
+    }).join('') + (()=>{
+      const S = synthLevels(no, ak);
+      const a = AREAS.find(x=>x.k===ak) || {limit:500};
+      const n = countChars(S.text);
+      return `<div class="lvsynth" id="lvsynth-${no}">
+        ${S.text ? `<div class="lvsprev">${esc(S.text)}</div>
+          <div class="lvsmeta">약 ${n}자 / ${a.limit}자${S.omitted?` · 중간 수준 ${S.omitted}개 생략`:''}${S.dropped?` · 한도로 활동 ${S.dropped}개 제외`:''}${S.unrev?` · <b class="warn">미검수 자동문장 ${S.unrev}개</b>`:''}</div>` : ''}
+        <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;">
+          <button class="btn ghost sm" onclick="composeLevels(${no},'${ak}')">⤵ 활동별 1문장으로 합성해 초안에 넣기</button>
+          <button class="btn ghost sm" onclick="composeLevels(${no},'${ak}',true)">⤵ 고른 문장 그대로 넣기</button>
+        </div>
+      </div>`;
+    })();
   }
   return `<div class="sec">
     <h3>📐 위계 평가 <span class="hint">항목별 수준 선택 → 문장 자동</span>
@@ -1010,6 +1041,73 @@ function withPeriod(s){
    화면·조합·프롬프트가 전부 이걸 거치므로, 교사가 마침표 없이 적었거나
    옛 데이터·다른 반에서 가져온 문장이어도 항상 마침표로 끝난 문장이 나간다.
    형태가 깨진 항목(sentences 없음)은 예외 대신 빈 문자열을 돌려준다. */
+/* ═══ 차원(관찰 관점) ═══
+   한 활동을 여러 각도로 본다. '항목 × 수준'을 곱셈으로 늘리는 대신
+   '활동 하나 + 차원 몇 개'의 덧셈으로 두어 입력 비용을 잡는다. */
+const DIM_LIB = {
+  know:'지식·이해',  proc:'과정·기능',  att:'가치·태도',
+  desg:'탐구 설계',  intp:'해석·결론',  comm:'협력적 소통',
+  life:'학습·생활 태도', rel:'관계·배려', grow:'진보·변화',
+  role:'실제적 역할', part:'참여도·의욕',
+  expl:'진로 탐색',  self:'자기 이해',  plan:'실천·계획',
+};
+/* 영역별 기본 3차원. subject가 proc를 1번에 두는 것은 '지식·이해 중심 평가 지양'을 구조로 강제하려는 것. */
+const DIM_PRESET = {
+  subject :['proc','know','att'], homeroom:['life','rel','grow'], autonomy:['role','part','grow'],
+  career  :['expl','self','plan'], club   :['role','proc','att'],
+};
+const DIM_OPT = { subject:['desg','intp','comm'], homeroom:[], autonomy:['comm'], career:['comm'], club:['comm','part'] };
+/* 수준 1~10 → 4밴드. 밴드마다 '무엇이 한 칸 올라갔는지'가 다르다(대상 확장 → 근거 요구 → 자기 점검). */
+const bandOf = lv => { const n=+lv; return n<=3?0 : n<=5?1 : n<=7?2 : 3; };
+
+/* 성취기준 종결 수행동사 계열별 사다리 — 과정·기능(proc)/탐구 설계(desg)가 쓴다.
+   ★모든 조각은 '순수 술어절'이다(활동명 미포함). 활동명을 조각에 넣으면 한 문장에 두 번 나와
+     교과세특 500자를 그대로 먹는다(설계 단계 실측). 모두 받침 ㅁ으로 끝나 평어체 검사를 통과한다. */
+const ACT_LADDER = {
+  infer  :['제시된 자료를 확인하는 데 머무름','자료를 근거로 결과를 해석함','근거를 들어 타당한 결론을 추론함','추론의 전제를 스스로 검증하고 반례까지 검토함'],
+  explain:['주요 용어를 확인하는 수준에 머무름','구조와 기능을 연결하여 설명함','사례를 들어 구분하여 정확하게 설명함','설명의 적용 범위와 예외를 스스로 짚어 설명함'],
+  design :['안내에 따라 절차를 수행함','조작 변인과 통제 변인을 구분하여 절차를 계획함','변인 통제의 타당성을 점검하고 절차를 수정하여 재설계함','방법의 한계를 진단하고 대안 절차를 고안하여 검증함'],
+  survey :['주어진 자료를 옮겨 적는 수준에 머무름','여러 자료를 모아 기준에 따라 정리함','자료의 출처와 신뢰성을 비교하여 선별함','상반된 자료를 대조하여 쟁점을 스스로 정리함'],
+  express:['형식에 맞추어 결과를 옮김','핵심 내용을 구조화하여 자료로 나타냄','대상에 맞게 표현 방식을 선택하여 나타냄','표현의 한계를 점검하고 대안 표현으로 다시 나타냄'],
+  comm   :['논의에 참여하여 자신의 결과를 공유함','자신의 해석을 근거와 함께 설명하고 질문에 답함','다른 의견의 근거를 확인하며 논의를 조율함','반론을 반영하여 결론의 진술 범위를 스스로 좁힘'],
+  apply  :['절차에 따라 결과를 판정함','원리를 적용하여 판정 근거를 설명함','오류 가능성을 점검하며 판정 과정을 검증함','판정 원리를 다른 사례로 확장하여 적용함'],
+};
+const DIM_TPL = {
+  know:['개념의 뜻을 확인하는 수준에 머무름','개념을 자신의 말로 다시 설명함','개념 사이의 관계를 연결하여 설명함','개념을 새로운 맥락에 적용하여 재구성함'],
+  att :['활동에 소극적으로 참여함','활동에 성실하게 참여하며 절차를 지킴','결과가 어긋날 때에도 원인을 확인하려는 태도를 보임','자신의 판단을 스스로 점검하고 문제 제기를 수용함'],
+  intp:['결과를 표로 옮겨 정리함','결과를 경향으로 읽고 개념과 연결함','예상과 어긋난 구간의 원인을 근거를 들어 좁힘','대안 해석을 함께 검토하고 결론의 한계를 밝힘'],
+  comm:ACT_LADDER.comm,
+  life:['기본 생활 습관을 지키는 데 안내가 필요함','정해진 일과를 꾸준히 지킴','스스로 계획을 세워 학습 습관을 유지함','어려운 상황에서도 계획을 조정하며 유지함'],
+  rel :['또래와의 관계에서 소극적인 모습을 보임','동료의 의견을 경청하며 무리 없이 지냄','어려움을 겪는 동료를 먼저 도움','갈등 상황에서 의견을 중재하여 분위기를 회복시킴'],
+  grow:['이전과 비슷한 모습을 유지함','지적한 부분을 받아들여 조금씩 고쳐 감','학기 초에 비해 태도가 뚜렷하게 나아짐','스스로 목표를 세워 변화의 방향을 유지함'],
+  role:['주어진 역할을 확인하는 데 그침','맡은 역할을 끝까지 수행함','역할을 넘어 빠진 부분을 채워 놓음','역할을 나누어 제안하고 진행을 이끄는 모습을 보임'],
+  part:['안내가 있어야 참여함','활동에 빠짐없이 참여함','먼저 의견을 내며 활동을 준비함','다른 학생의 참여까지 이끌어 냄'],
+  expl:['안내된 자료를 확인하는 수준에 머무름','관심 분야의 정보를 찾아 정리함','여러 경로의 정보를 비교하여 관심 분야를 좁혀 감','관심 분야의 쟁점까지 확인하여 탐색을 넓힘'],
+  self:['자신의 강점을 말하기 어려워함','자신의 관심과 강점을 정리함','활동 경험과 자신의 강점을 연결하여 설명함','강점과 보완점을 함께 짚어 방향을 조정함'],
+  plan:['계획을 세우는 데 안내가 필요함','다음에 할 일을 정리함','시기별로 할 일을 나누어 계획을 세움','계획을 실행하며 결과에 따라 수정함'],
+  proc:ACT_LADDER.explain, desg:ACT_LADDER.design,
+};
+/* 앵커 성취기준 코드 → 수행동사 계열 (2022 개정 생명과학 원문 대조본) */
+const ACT_OF_CODE = {
+  '12생과01-01':'comm','12생과01-02':'express','12생과01-03':'infer','12생과01-04':'infer',
+  '12생과01-05':'design','12생과01-06':'explain','12생과01-07':'survey',
+  '12생과02-01':'express','12생과02-02':'survey','12생과02-03':'explain','12생과02-04':'infer',
+  '12생과02-05':'explain','12생과02-06':'apply','12생과02-07':'comm',
+  '12생과03-01':'explain','12생과03-02':'infer','12생과03-03':'comm','12생과03-04':'explain','12생과03-05':'express',
+};
+/* 계열 판정 — ①앵커 코드 ②활동명의 활동 유형 ③기본값 explain */
+function actOf(it){
+  const m = (it && it.anchor||'').match(/1[12]생과\d{2}-\d{2}/);
+  if(m && ACT_OF_CODE[m[0]]) return ACT_OF_CODE[m[0]];
+  const t = detectActivityType(((it&&it.base)||(it&&it.name)||''));
+  return ({ inquiry:'design', presentation:'comm', writing:'express', teamwork:'comm' })[t] || 'explain';
+}
+/* 차원 × 밴드 → 술어절. 교사가 손으로 쓴 문장이 있으면 sentOf가 먼저 그걸 돌려주므로 여기 안 온다. */
+function genSent(it, n){
+  const b = bandOf(n);
+  const arr = (it.dim==='proc' || it.dim==='desg') ? (ACT_LADDER[actOf(it)] || ACT_LADDER.explain) : DIM_TPL[it.dim];
+  return (arr && arr[b]) || '';
+}
 /* 활동 묶음 키 — 단독 항목도 자기만의 키를 갖게 해서 아래 groupItems가 한 갈래로 처리된다. */
 function gkeyOf(it){ return (it && it.grp) || ('#' + (it && it.id)); }
 /* 활동 이름 — base가 있으면 그것, 없으면 항목명(구버전 단독 항목) */
@@ -1037,8 +1135,11 @@ function sentOf(it, lv){
   if(!it || !lv) return '';
   const n = parseInt(lv, 10);
   if(!(n>=1 && n<=10)) return '';
-  if(!Array.isArray(it.sentences)) return '';
-  return withPeriod(it.sentences[n-1]);
+  const arr = Array.isArray(it.sentences) ? it.sentences : [];
+  const manual = typeof arr[n-1]==='string' ? arr[n-1].trim() : '';
+  if(manual) return withPeriod(manual);   // ① 교사가 쓴 문장·구버전 손글이 언제나 최우선
+  if(!it.dim) return '';                  // ② 차원이 없으면 자동 생성하지 않는다(v3.2와 동일)
+  return withPeriod(genSent(it, n));      // ③ 차원 × 밴드 지연 생성 — 저장하지 않는다
 }
 function setLevel(no, ak, itemId, val){
   const ar = stu(no).areas[ak];
@@ -1051,12 +1152,102 @@ function setLevel(no, ak, itemId, val){
     const sent = sentOf(it, val);
     el.innerHTML = sent ? esc(sent) : '<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>';
   }
+  refreshSynth(no, ak);
+}
+/* 합성 미리보기만 다시 그린다 — 전체 리렌더를 하면 입력 중이던 칸의 포커스가 날아간다. */
+function refreshSynth(no, ak){
+  const box = document.getElementById('lvsynth-'+no); if(!box) return;
+  const prev = box.querySelector ? box.querySelector('.lvsprev') : null;
+  const meta = box.querySelector ? box.querySelector('.lvsmeta') : null;
+  const S = synthLevels(no, ak), a = AREAS.find(x=>x.k===ak) || {limit:500};
+  if(prev) prev.textContent = S.text;
+  if(meta) meta.innerHTML = `약 ${countChars(S.text)}자 / ${a.limit}자`
+    + (S.omitted?` · 중간 수준 ${S.omitted}개 생략`:'') + (S.dropped?` · 한도로 활동 ${S.dropped}개 제외`:'')
+    + (S.unrev?` · <b class="warn">미검수 자동문장 ${S.unrev}개</b>`:'');
 }
 function composedLevels(no, ak){
   const ar = stu(no).areas[ak];
   return itemsFor(ak)
     .map(it=> sentOf(it, (ar.levels||{})[it.id]))
     .filter(Boolean).join(' ');
+}
+/* ═══ 합성 파이프라인 — 활동당 정확히 1문장 ═══ */
+/* 학생 고유 장면(ev)은 자유 텍스트라 형태를 예측할 수 없다. 두 형태만 받고 각각 다른 자리에 넣는다.
+   명사구('감자 절편 재측정 제안') → 도입 소재로 '~에서'
+   ~함 문장('예상과 다른 구간을 다시 측정함') → 앞에 독립 문장으로 세운다
+   '에서'는 받침과 무관하게 붙으므로 조사 선택이 필요 없다. */
+function evForm(s){
+  s = String(s==null?'':s).trim().replace(/[.。]+$/,'');
+  if(!s) return null;
+  return { txt:s, nominal: endsNominal(s) };
+}
+/* 종속절 강등 — 술어절이 명사형으로 끝나므로 앞 절만 연결어미로 바꾼다.
+   매칭 실패 시 null → 호출부가 강등을 포기하고 두 문장으로 나눈다(항상 문법적). */
+const DEMOTE = [['함','하며'],['됨','되며'],['임','이며'],['짐','지며'],['름','르며'],
+                ['냄','내며'],['봄','보며'],['킴','키며'],['옴','오며'],['음','으며']];
+function demote(s){
+  s = String(s==null?'':s).trim().replace(/[.。]+$/,'');
+  for(const [a,b] of DEMOTE) if(s.endsWith(a)) return s.slice(0,-1)+b;
+  return null;
+}
+/* 같은 동사가 한 문단에 두 번 이상 나오면 뒤엣것을 한 칸 위 표현으로 바꾼다(상투적 반복 방지) */
+const VERB_UP = [['이해함','연결하여 설명함'],['파악함','구분하여 파악함'],['설명함','사례를 들어 설명함']];
+function dedupeVerb(text){
+  let t = String(text==null?'':text);
+  for(const [from,to] of VERB_UP){
+    let first = true;
+    t = t.replace(new RegExp(from,'g'), m=>{ if(first){ first=false; return m; } return to; });
+  }
+  return t;
+}
+/* 활동 하나를 한 문장으로 — 최고·최저 밴드만 노출하고 중간은 생략한다(글자수 방어). */
+function synthGroupText(G, ar){
+  const ev   = evForm((ar.ev||{})[G.key]);
+  const lead = (ev && !ev.nominal) ? ev.txt : (G.name || '활동');
+  const pre  = (ev &&  ev.nominal) ? (ev.txt + '. ') : '';
+  let body;
+  if(G.lo){
+    const dem = demote(G.lo.sn);
+    body = dem ? `${lead}에서 ${dem}, ${G.hi.sn}` : `${lead}에서 ${G.lo.sn} ${G.hi.sn}`;
+  } else body = `${lead}에서 ${G.hi.sn}`;
+  return pre + body;
+}
+/* 활동별 1문장을 이어 붙여 초안 후보를 만든다.
+   반환 {text, unrev, dropped, omitted} — unrev=미검수 자동문장이 섞인 활동 수. */
+function synthLevels(no, ak){
+  const ar = stu(no).areas[ak], a = AREAS.find(x=>x.k===ak) || {limit:500};
+  const groups = groupItems(itemsFor(ak)).map(G=>{
+    const picks = G.items.map(it=>{
+      const lv = (ar.levels||{})[it.id]; if(!lv) return null;
+      const sn = sentOf(it, lv); if(!sn) return null;
+      return { band:bandOf(lv), lv:+lv, sn:sn.replace(/[.。]+$/,''), rev:!!it.rev, auto:!!it.dim && !(it.sentences||[])[lv-1] };
+    }).filter(Boolean);
+    if(!picks.length) return null;
+    const s = picks.slice().sort((p,q)=> q.band-p.band || q.lv-p.lv);
+    return { key:G.key, name:G.name, anchor:G.anchor, picks,
+             hi:s[0], lo:s.length>1 ? s[s.length-1] : null,
+             omitted:Math.max(0,s.length-2), avg:s.reduce((t,p)=>t+p.band,0)/s.length };
+  }).filter(Boolean);
+  if(!groups.length) return { text:'', unrev:0, dropped:0, omitted:0 };
+
+  const build = gs => dedupeVerb(gs.map((G,i)=>{
+    const conj = i===0 ? '' : (G.avg > gs[i-1].avg ? '나아가 ' : G.avg < gs[i-1].avg ? '한편 ' : '이를 바탕으로 ');
+    const t = synthGroupText(G, ar);
+    // 접속어는 '선행 독립문장(pre)' 뒤, 본문 앞에 들어가야 한다
+    return conj ? t.replace(/^(.*?\. )?/, (m)=> m + conj) : t;
+  }).map(s=> withPeriod(s)).join(' '));
+
+  let list = groups.slice(), text = build(list), dropped = 0;
+  // 한도 초과 시 평균 밴드가 낮은 활동부터 종속절 → 활동 순으로 덜어낸다
+  let guard = 0;
+  while(countChars(text) > (a.limit||500) && list.length && guard++ < 40){
+    const k = list.reduce((m,G,j)=> G.avg < list[m].avg ? j : m, 0);
+    if(list[k].lo) list[k] = Object.assign({}, list[k], { lo:null });
+    else { list.splice(k,1); dropped++; }
+    text = build(list);
+  }
+  return { text, dropped, omitted:list.reduce((n,G)=>n+G.omitted,0),
+           unrev:list.reduce((n,G)=> n + (G.picks.some(p=>p.auto && !p.rev) ? 1 : 0), 0) };
 }
 /* 프롬프트용 — 활동(큰 주제)별로 묶어 항목·수준을 적는다.
    AI가 '따로 놀던 채점 항목 N개'가 아니라 '활동 하나 안의 여러 면'으로 읽게 하려는 것. */
@@ -1083,8 +1274,17 @@ function hasLevels(no, ak){
   const ar = stu(no).areas[ak];
   return itemsFor(ak).some(it=> !!sentOf(it, (ar.levels||{})[it.id]));
 }
-function composeLevels(no, ak){
-  const txt = composedLevels(no, ak);
+/* 이 학생만의 장면. 입력 중 전체 리렌더를 하면 포커스가 날아가므로 저장만 하고,
+   합성 미리보기는 포커스를 잃을 때(blur) 갱신한다. */
+function setEv(no, ak, gkey, v){
+  const ar = stu(no).areas[ak];
+  if(!ar.ev) ar.ev = {};
+  if(v && v.trim()) ar.ev[gkey] = v; else delete ar.ev[gkey];
+  saveSoon();
+}
+/* raw=true 면 예전처럼 고른 문장을 그대로 잇는다(합성이 어색할 때의 탈출구). */
+function composeLevels(no, ak, raw){
+  const txt = raw ? composedLevels(no, ak) : (synthLevels(no, ak).text || composedLevels(no, ak));
   if(!txt){ setGenMsg(no,'err','선택된 위계 문장이 없습니다. 항목별 수준을 먼저 고르세요.'); return; }
   const apply = ()=>{
     stu(no).areas[ak].draft = txt; save();
@@ -1137,6 +1337,15 @@ function renderItemsModal(){
         </div>
         <div class="itemanchor">
           <input class="txt" list="achvList" value="${esc(it.anchor||'')}" placeholder="🔗 성취기준·단원 연결 (선택 · 예: 12생과02-04 내분비계와 호르몬)" oninput="onItemAnchor('${it.id}',this.value)">
+        </div>
+        <div class="itemdim">
+          <span class="dimlbl">관찰 관점</span>
+          <select class="cls dimsel" onchange="onItemDim('${it.id}',this.value)">
+            <option value="">— 없음(문장 직접 입력)</option>
+            ${dimOptionsHTML(it.dim)}
+          </select>
+          ${it.dim ? `<span class="dimhint">수준을 고르면 문장이 자동으로 만들어집니다. 아래 칸에 직접 쓰면 그 문장이 우선합니다.</span>
+            <label class="revchk"><input type="checkbox" ${it.rev?'checked':''} onchange="onItemRev('${it.id}',this.checked)"> 검수 완료</label>` : ''}
         </div>
         <div class="itembody hidden" id="ibody-${it.id}">
           ${Array.from({length:10},(_,lv)=>`
@@ -1268,6 +1477,23 @@ function delItem(id){
     save(); renderItemsModal();
   });
 }
+/* 이 영역에서 고를 수 있는 차원 — 기본 3개 + 선택 몇 개. 목록에 없는 값이 이미 들어 있으면 그것도 보여 준다. */
+function dimKeysFor(ak){
+  const base = (DIM_PRESET[ak]||[]).concat(DIM_OPT[ak]||[]);
+  return base.filter((k,i)=> base.indexOf(k)===i);
+}
+function dimOptionsHTML(cur){
+  const keys = dimKeysFor(_itemsArea);
+  if(cur && keys.indexOf(cur)<0) keys.push(cur);
+  return keys.map(k=>`<option value="${k}"${cur===k?' selected':''}>${esc(DIM_LIB[k]||k)}</option>`).join('');
+}
+function onItemDim(id, v){
+  const it=itemById(id); if(!it) return;
+  it.dim = DIM_LIB[v] ? v : '';
+  if(it.dim && !it.name) it.name = DIM_LIB[it.dim];   // 항목명이 비어 있으면 차원 이름을 기본값으로
+  save(); renderItemsModal();
+}
+function onItemRev(id, on){ const it=itemById(id); if(it){ it.rev = !!on; saveSoon(); } }
 function onItemName(id, v){ const it=itemById(id); if(it){ it.name = v; saveSoon(); } }
 function onItemSent(id, lv, v){
   const it=itemById(id); if(!it) return;
