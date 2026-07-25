@@ -393,11 +393,11 @@ body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역�
   </div>
 </div>
 
-<!-- 위계 항목 관리 modal -->
+<!-- 활동·평가항목 관리 modal -->
 <div class="modal-back" id="itemsBack">
   <div class="modal wide">
     <h2 id="itemsTitle"></h2>
-    <div class="note" style="margin-bottom:10px;">항목 = 수행평가·관찰 영역 단위. <b>[자동 생성]</b>은 항목명에 맞는 위계 1~10 기본 문장을 만들며, 각 문장은 직접 수정할 수 있습니다. <b>🔗 성취기준·단원</b>을 연결하면 초안이 그 도달 과정 중심으로 쓰이고(생명과학은 코드 자동완성), <b>다른 반에서 만든 항목을 그대로 가져와</b> 재사용할 수 있습니다. 이 설정은 <b>현재 반 전체 공용</b>이고, 학생 카드에서는 항목별 수준(1~10)만 고르면 됩니다.</div>
+    <div class="note" style="margin-bottom:var(--sp-3);"><b>활동</b> = 수행평가·학급활동 같은 큰 주제. 그 안에 <b>평가 항목</b>을 둡니다(예: 혈액형 판정 수행평가 → 판정 정확성·보고서·안전 수칙).<br>항목마다 <b>관찰 관점</b>을 고르면 수준 1~10 문장이 자동으로 만들어지고, 직접 고쳐 쓸 수도 있습니다. <b>🔗 성취기준·단원</b>을 연결하면 초안이 그 도달 과정 중심으로 쓰입니다(생명과학은 코드 자동완성).<br><b>다른 반에서 만든 항목을 그대로 가져와</b> 재사용할 수 있습니다. 이 설정은 <b>현재 반 전체 공용</b>이고, 학생 카드에서는 항목별 수준만 고르면 됩니다.</div>
     <div id="itemsBody"></div>
     <div class="mrow">
       <button class="btn green" onclick="addGroup()">＋ 활동 추가</button>
@@ -412,7 +412,7 @@ body.readonly .stu-detail{opacity:.55;pointer-events:none;}   /* 편집 영역�
   <div class="modal wide">
     <h2>📊 진행 현황 — <span id="dashCls"></span></h2>
     <div class="dashwrap" id="dashBody"></div>
-    <div class="note">숫자=초안 글자수(<span class="dc-ok">여유</span>·<span class="dc-warn">한도 임박</span>·<span class="dc-over">초과</span>) · <span class="dc-mat">재료</span>=누가기록/참고자료/위계만 있음 · — =미착수 · <b>셀을 누르면 해당 학생·영역으로 이동</b></div>
+    <div class="note">숫자=초안 글자수(<span class="dc-ok">여유</span>·<span class="dc-warn">한도 임박</span>·<span class="dc-over">초과</span>) · <span class="dc-mat">재료</span>=관찰기록/참고자료/활동수준만 있음 · — =미착수 · <b>셀을 누르면 해당 학생·영역으로 이동</b></div>
     <div class="mrow">
       <button class="btn gray" onclick="closeDash()">닫기</button>
     </div>
@@ -791,7 +791,7 @@ function applyRoster(){
   const doApply = ()=>{ cur().students = next; save(); closeRoster(); renderStudents(); };
   if(removed.length){
     const names = removed.map(no=>`${no} ${old[no].name||''}`.trim()).join(', ');
-    confirmModal(`명단에서 빠진 학생 ${removed.length}명의 모든 기록이 함께 삭제됩니다.\n누가기록·참고자료·초안·위계 수준 선택·보강 문답이 전부 사라지며 되돌릴 수 없습니다.\n삭제: ${names}\n\n진행할까요?`, true, ()=>{
+    confirmModal(`명단에서 빠진 학생 ${removed.length}명의 모든 기록이 함께 삭제됩니다.\n관찰 기록·참고 자료·초안·활동 수준 선택·보강 문답이 전부 사라지며 되돌릴 수 없습니다.\n삭제: ${names}\n\n진행할까요?`, true, ()=>{
       // 되돌릴 지점부터 남긴다. 스냅샷을 못 만들면 삭제를 진행하지 않는다.
       if(!ensureUndoPoint('명단 재적용 직전')) return;
       doApply();
@@ -863,7 +863,7 @@ function renderDetail(){
         <span class="cname" style="font-size:16.5px;">${esc(s.name)}</span>
       </div>
       <div class="note" style="border-color:var(--red-accent);color:var(--bad);line-height:1.7;">
-        ⚠ 이 반의 위계 항목이 손상되어 편집 화면을 열지 못했습니다.<br>
+        ⚠ 이 반의 평가 항목이 손상되어 편집 화면을 열지 못했습니다.<br>
         아래에서 항목을 확인·수정하거나, 최근 자동백업으로 되돌릴 수 있습니다.<br>
         <span style="color:var(--text-light);font-size:11px;">${esc((err&&err.message)||'')}</span>
       </div>
@@ -995,7 +995,7 @@ function levelSectionHTML(no, ak){
   const ar = stu(no).areas[ak];
   let inner;
   if(items.length===0){
-    inner = `<div class="empty">아직 항목이 없습니다. <b>[⚙ 항목 관리]</b>에서 수행평가·관찰 영역과 위계 1~10 문장을 만들어 두면, 학생마다 수준만 골라 문장을 자동으로 얻습니다. (반 전체 공용)</div>`;
+    inner = `<div class="empty">아직 항목이 없습니다. <b>[⚙ 항목 관리]</b>에서 활동(수행평가·관찰 영역)과 평가 항목을 만들어 두면, 학생마다 수준만 골라 문장을 자동으로 얻습니다. (반 전체 공용)</div>`;
   } else {
     const rowHTML = it=>{
       const lv = (ar.levels||{})[it.id] || '';
@@ -1010,7 +1010,7 @@ function levelSectionHTML(no, ak){
         <select class="lvsel" onchange="setLevel(${no},'${ak}','${it.id}',this.value)">
           <option value="">— 수준 선택</option>${opts}
         </select>
-        <span class="lvsent" id="lvsent-${no}-${it.id}">${sent?esc(sent):'<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>'}</span>
+        <span class="lvsent" id="lvsent-${no}-${it.id}">${sent?esc(sent):'<span class="lvhint">수준(1~10)을 고르면 문장이 들어갑니다.</span>'}</span>
       </div>`;
     };
     /* 활동(큰 주제)으로 묶어 보여 준다. 활동에 속한 항목이 2개 이상일 때만 머리글 카드를 씌우고,
@@ -1210,7 +1210,7 @@ function setLevel(no, ak, itemId, val){
   const el = document.getElementById(`lvsent-${no}-${itemId}`);
   if(el && it){
     const sent = sentOf(it, val);
-    el.innerHTML = sent ? esc(sent) : '<span class="lvhint">수준(1~10)을 선택하면 위계 문장이 들어갑니다.</span>';
+    el.innerHTML = sent ? esc(sent) : '<span class="lvhint">수준(1~10)을 고르면 문장이 들어갑니다.</span>';
   }
   refreshSynth(no, ak);
 }
@@ -1358,16 +1358,16 @@ function setEv(no, ak, gkey, v){
 /* raw=true 면 예전처럼 고른 문장을 그대로 잇는다(합성이 어색할 때의 탈출구). */
 function composeLevels(no, ak, raw){
   const txt = raw ? composedLevels(no, ak) : (synthLevels(no, ak).text || composedLevels(no, ak));
-  if(!txt){ setGenMsg(no,'err','선택된 위계 문장이 없습니다. 항목별 수준을 먼저 고르세요.'); return; }
+  if(!txt){ setGenMsg(no,'err','선택된 문장이 없습니다. 항목별 수준을 먼저 고르세요.'); return; }
   const apply = ()=>{
     stu(no).areas[ak].draft = txt; save();
     const dt = document.getElementById('draft-'+no); if(dt) dt.value = txt;
     refreshMeter(no, ak);
-    setGenMsg(no,'ok','⤵ 위계 문장 조합을 초안에 넣었습니다. 이 학생만의 특성이 드러나게 다듬어 쓰세요.');
+    setGenMsg(no,'ok','⤵ 문장 조합을 초안에 넣었습니다. 이 학생만의 특성이 드러나게 다듬어 쓰세요.');
   };
   const curDraft = (stu(no).areas[ak].draft||'').trim();
   if(curDraft && curDraft!==txt){
-    confirmModal('기존 초안을 지우고, 선택한 위계 문장 조합으로 교체합니다.\n진행할까요?', true, apply);
+    confirmModal('기존 초안을 지우고, 선택한 문장 조합으로 교체합니다.\n진행할까요?', true, apply);
   } else apply();
 }
 
@@ -1387,7 +1387,7 @@ function closeItems(){
 function renderItemsModal(){
   const ak = _itemsArea; if(!ak) return;
   const a = AREAS.find(x=>x.k===ak);
-  document.getElementById('itemsTitle').textContent = `📐 위계 항목 관리 — ${areaTitleOf(ak, a)}`;
+  document.getElementById('itemsTitle').textContent = `📐 활동·평가항목 관리 — ${areaTitleOf(ak, a)}`;
   const items = itemsFor(ak);
   const cands = bankCandidates(ak);
   const bank = cands.length ? `<div class="bankrow">
@@ -1405,7 +1405,7 @@ function renderItemsModal(){
         <div class="itemhead">
           <input class="txt" style="flex:1;min-width:150px;" value="${esc(it.name)}" placeholder="항목명 (예: 유전 원리 탐구, 교우관계)" oninput="onItemName('${it.id}',this.value)">
           <button class="btn green sm" onclick="autoFillItem('${it.id}')">자동 생성</button>
-          <button class="btn ghost sm" onclick="toggleItemEdit('${it.id}')">위계 문장 <span id="itoggle-${it.id}">▼</span></button>
+          <button class="btn ghost sm" onclick="toggleItemEdit('${it.id}')">수준별 문장 <span id="itoggle-${it.id}">▼</span></button>
           <button class="xbtn" onclick="delItem('${it.id}')" title="항목 삭제">✕</button>
         </div>
         <div class="itemanchor">
@@ -1424,7 +1424,7 @@ function renderItemsModal(){
           ${Array.from({length:10},(_,lv)=>`
             <div class="lvledit">
               <span class="lvbadge" style="background:${LV_COLORS[lv]}">${lv+1}</span>
-              <textarea class="txt" rows="2" placeholder="위계 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent('${it.id}',${lv},this.value)" onblur="onItemSentBlur('${it.id}',${lv},this)">${esc(it.sentences[lv]||'')}</textarea>
+              <textarea class="txt" rows="2" placeholder="수준 ${lv+1} 문장 (1=최하위, 10=최상위)" oninput="onItemSent('${it.id}',${lv},this.value)" onblur="onItemSentBlur('${it.id}',${lv},this)">${esc(it.sentences[lv]||'')}</textarea>
             </div>`).join('')}
         </div>
       </div>`;
@@ -1518,9 +1518,9 @@ function importItemsFromSel(){
   const fresh = srcItems.filter(it=> !have.has(key(it)));
   const skip = srcItems.length - fresh.length;
   if(fresh.length===0){ alert(`'${sel.value}'의 항목 ${srcItems.length}개는 이미 모두 있습니다. 가져오지 않았습니다.`); return; }
-  confirmModal(`'${sel.value}'의 위계 항목 ${fresh.length}개를 현재 반으로 복사합니다.`
+  confirmModal(`'${sel.value}'의 평가 항목 ${fresh.length}개를 현재 반으로 복사합니다.`
     + (skip ? `\n(이미 있는 ${skip}개는 건너뜁니다)` : '')
-    + `\n(항목명·성취기준·위계 문장만 복사되고, 학생별 수준 선택은 각자 새로 고릅니다.)\n진행할까요?`, false, ()=>{
+    + `\n(항목명·성취기준·수준별 문장만 복사되고, 학생별 수준 선택은 각자 새로 고릅니다.)\n진행할까요?`, false, ()=>{
     /* 활동 묶음은 가져오는 반 안에서 새 키로 다시 맺어 준다(원본 반의 grp와 충돌하지 않게). */
     const gmap = Object.create(null);
     fresh.forEach(it=>{ const g=it.grp||''; if(g && !gmap[g]) gmap[g]=newGroupKey(); });
@@ -1602,7 +1602,7 @@ function autoFillItem(id){
     const t = document.getElementById('itoggle-'+id); if(t) t.textContent='▲';
   };
   if(it.sentences.some(s=>s && s.trim())){
-    confirmModal('이미 입력된 위계 문장을 기본 문장으로 덮어씁니다.\n진행할까요?', true, doFill);
+    confirmModal('이미 입력된 문장을 기본 문장으로 덮어씁니다.\n진행할까요?', true, doFill);
   } else doFill();
 }
 
@@ -1743,7 +1743,7 @@ function refreshMeter(no, ak){
 const SYSTEM_PROMPT = `당신은 대한민국 고등학교 학교생활기록부(생기부) 작성을 돕는 보조 도구입니다. 교사가 직접 관찰·기록한 자료를 바탕으로 생기부 서술형 문구 '초안'을 생성합니다. 최종 입력은 교사가 검토·수정합니다.
 
 [최상위 원칙 — 절대 위반 불가]
-1. 오직 교사가 제공한 '누가기록', '참고자료', '항목별 평가 수준(위계)'에 적힌 사실만을 근거로 작성한다. 외부 지식·일반론·추측·과장·미사여구를 절대 추가하지 않는다.
+1. 오직 교사가 제공한 '관찰 기록', '참고 자료', '항목별 활동 수준'에 적힌 사실만을 근거로 작성한다. 외부 지식·일반론·추측·과장·미사여구를 절대 추가하지 않는다.
 2. 제공된 자료에 없는 활동·사실·감정·다짐은 생성하지 않는다. 자료가 부실하면 부실한 대로 짧게 작성하고, 분량을 채우려 일반적 문구를 덧붙이지 않는다.
 3. 너는 초안만 제시한다. 사실 확인은 교사가 한다.
 
@@ -1785,7 +1785,7 @@ function buildUserPrompt(no, ak){
   if(ak==='club' && ar.clubName) head += `\n[동아리명] ${ar.clubName}`;
   const lvItems = itemsFor(ak);
   if(lvItems.some(it=> (ar.levels||{})[it.id] && (it.anchor||'').trim()))
-    head += `\n[성취기준 반영] 위계 항목에 연결된 성취기준·단원의 도달 과정과 수준이 드러나게 서술(성취기준 코드·명은 본문에 직접 노출하지 말 것).`;
+    head += `\n[성취기준 반영] 평가 항목에 연결된 성취기준·단원의 도달 과정과 수준이 드러나게 서술(성취기준 코드·명은 본문에 직접 노출하지 말 것).`;
   const lvTxt = levelBlocks(no, ak);   // 활동(큰 주제) 단위로 묶인 블록
   const evTxt = evBlocks(no, ak);      // 학생별 활동 중 특이사항 — 있을 때만 블록이 붙는다
   const coach = ar.coach || {q:[],phr:[]};
@@ -1794,12 +1794,12 @@ function buildUserPrompt(no, ak){
   const phrTxt = (coach.phr||[]).filter(p=>p.on).map(p=>p.text).join(", ");
   return `${head}
 
-[항목별 평가 수준(위계)]
+[활동별 평가 수준]
 ${lvTxt || '없음'}${lvTxt.includes('[활동]') ? '\n(같은 활동 안의 여러 항목은 한 활동의 여러 면이다. 항목을 나열하지 말고 그 활동에 대한 서술로 통합할 것.\n ★활동명·항목명은 맥락 파악용일 뿐이다. 본문에 그대로 쓰지 말고, 도달한 수행 수준만 서술할 것.)' : ''}${evTxt ? `
 
 [학생별 활동 중 특이사항 (교사가 직접 관찰한 사실 · ★이 학생을 다른 학생과 구별하는 핵심 재료)]
 ${evTxt}
-(위계 문장은 반 전체가 공유하지만 이것은 이 학생만의 것이다. 반드시 본문에 반영하되, 앞의 활동명 라벨은 옮겨 적지 말 것.)` : ''}
+(수준 문장은 반 전체가 공유하지만 이것은 이 학생만의 것이다. 반드시 본문에 반영하되, 앞의 활동명 라벨은 옮겨 적지 말 것.)` : ''}
 
 [누가기록]
 ${logs}
@@ -1813,7 +1813,7 @@ ${qaTxt || '없음'}
 [교사가 '관찰됨'으로 선택한 관점 (자료로 뒷받침될 때만 반영, 없으면 무시)]
 ${phrTxt || '없음'}
 
-위 항목별 평가 수준·${evTxt?'특이사항·':''}누가기록·참고자료·보강 문답에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 위계 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''}${evTxt?' 특이사항은 빠뜨리지 말 것 — 그것이 이 학생만의 내용이다.':''} 본문만 출력.`;
+위 항목별 평가 수준·${evTxt?'특이사항·':''}누가기록·참고자료·보강 문답에 적힌 사실만 근거로, 위 모든 규정을 지켜 ${areaTitle} 문구 초안을 작성하라.${lvTxt?' 수준 문장은 항목 구분 없이 자연스럽게 연결·통합하되 새로운 사실을 추가하지 말 것.':''}${evTxt?' 특이사항은 빠뜨리지 말 것 — 그것이 이 학생만의 내용이다.':''} 본문만 출력.`;
 }
 function copyPrompt(no, ak){
   const full = "[시스템 지침]\n"+SYSTEM_PROMPT+"\n\n=====\n\n"+buildUserPrompt(no, ak);
@@ -1897,7 +1897,7 @@ function buildCoachPrompt(no, ak){
 ${logs}
 [참고자료]
 ${(ar.paste||'').trim() || "(없음)"}
-[위계 평가 반영]
+[활동 수준 평가 반영]
 ${lv}${evBlocks(no,ak) ? `
 [학생별 활동 중 특이사항]
 ${evBlocks(no,ak)}` : ''}
@@ -2218,7 +2218,7 @@ function importRecords(p){
         : `\n\n⚠ 보낸 쪽에 반 정보가 없습니다.\n현재 열려 있는 '${target}' 반에 이름으로만 병합합니다.\n반이 맞는지 확인하고 진행하세요.`);
   const _rbItems = (p.rubric && Array.isArray(p.rubric.items)) ? p.rubric.items.filter(x=>x && x.key) : [];
   const rbNote = _rbItems.length
-    ? `\n위계 항목 ${_rbItems.length}개: ${_rbItems.map(x=>x.name||x.key).join(' · ')}\n(채점 점수가 학생별 위계 수준으로 들어갑니다. 이미 골라 둔 수준이 있으면 덮어쓰고 건수를 알려 줍니다)`
+    ? `\n평가 항목 ${_rbItems.length}개: ${_rbItems.map(x=>x.name||x.key).join(' · ')}\n(채점 점수가 학생별 활동 수준으로 들어갑니다. 이미 골라 둔 수준이 있으면 덮어쓰고 건수를 알려 줍니다)`
     : '';
   const msg = `${src}에서 보낸 기록을 불러옵니다.\n\n대상 반: ${target}\n영역: ${areaDef.t}\n학생 ${nos.length}명${rbNote}${note}\n\n병합할까요? (기존 기록은 지워지지 않고 추가만 됩니다)`;
   confirmModal(msg, fallback, ()=>{
@@ -2346,7 +2346,7 @@ function importRecords(p){
     // 저장이 실패했는데 '완료'라고 알리면 교사가 사라진 데이터를 모른 채 넘어간다.
     alert((_saved ? '' : '⚠ 저장에 실패했습니다(저장 공간 부족).\n지금 바로 [⬇ 백업]으로 파일을 내려받으세요. 새로고침하면 아래 내용이 사라집니다.\n\n')
       + `기록 병합 완료 — '${target}' 학생 ${matched}명\n누가기록 ${logAdd}건 · 참고자료 ${pasteAdd}건 추가`
-      + (rb ? `\n위계: 항목 ${itemsNew}개 생성 · 문장 ${itemsSeed}칸 채움 · 수준 ${lvSet}건 입력` : '')
+      + (rb ? `\n평가 항목: ${itemsNew}개 생성 · 문장 ${itemsSeed}칸 채움 · 수준 ${lvSet}건 입력` : '')
       + (lvChanged ? `\n※ 이미 골라 둔 수준 ${lvChanged}건을 새 점수로 덮어썼습니다` : '')
       + (byName ? `\n(번호가 달라 이름으로 매칭: ${byName}명)` : '')
       + (byBase ? `\n(괄호 표기 차이로 매칭: ${byBase}명 — 예: '홍길동' ↔ '홍길동(공동)')` : '')
