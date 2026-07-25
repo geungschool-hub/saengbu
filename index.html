@@ -48,9 +48,10 @@ html,body{margin:0;padding:0;height:100%;font-family:'Noto Sans KR',sans-serif;b
 body{overflow:hidden;}
 /* ===== 앱 셸 (PC): 상단바 고정 · 본문만 스크롤 · 하단 크레딧 고정 ===== */
 .app{display:flex;flex-direction:column;height:100vh;height:100dvh;overflow:hidden;}   /* flex여야 읽기전용 배너가 추가돼도 .main만 남은 높이를 먹는다(grid 자동배치 오배정 방지) */
-.main{flex:1 1 auto;min-height:0;overflow:hidden;padding:var(--sp-3) var(--sp-4) calc(10px + env(safe-area-inset-bottom));}
+.main{flex:1 1 auto;min-height:0;overflow:hidden;padding:var(--sp-3) var(--sp-3) calc(10px + env(safe-area-inset-bottom));}
 .workspace{height:100%;min-height:0;display:grid;gap:var(--sp-3);grid-template-columns:1fr;}
-@media(min-width:1024px){ .workspace{grid-template-columns:340px minmax(0,1fr);} }
+@media(min-width:1024px){ .workspace{grid-template-columns:288px minmax(0,1fr);} }
+@media(min-width:1600px){ .workspace{grid-template-columns:300px minmax(0,1fr);} }
 /* 좁은 화면: 마스터-디테일 토글 (목록 ↔ 편집) */
 @media(max-width:1023px){
   .workspace.has-sel .stu-master{display:none;}
@@ -258,7 +259,7 @@ select.lvsel{padding:var(--sp-2);border:1.5px solid var(--brd);border-radius:var
 .srow .cdots{margin-left:auto;}
 
 .stu-detail{min-height:0;overflow-y:auto;}
-.detail-inner{background:var(--white);border-radius:var(--r-lg);box-shadow:0 1px 4px rgba(0,0,0,.06);padding:var(--sp-4) var(--sp-4) var(--sp-6);max-width:1240px;}
+.detail-inner{background:var(--white);border-radius:var(--r-lg);box-shadow:0 1px 4px rgba(0,0,0,.06);padding:var(--sp-4) var(--sp-4) var(--sp-6);}
 .detail-head{display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-3);padding-bottom:var(--sp-3);border-bottom:2px solid var(--blue-dark);}
 .detail-head .back{display:none;}
 .detail-empty{height:100%;min-height:240px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:var(--fs-base);line-height:1.9;padding:var(--sp-5);}
@@ -266,8 +267,9 @@ select.lvsel{padding:var(--sp-2);border:1.5px solid var(--brd);border-radius:var
 
 /* 편집: 중(작성) · 우(기재요령·검증) — 넓은 화면에서 3-pane 완성 */
 .editor-grid{display:grid;gap:var(--sp-4);grid-template-columns:1fr;align-items:start;}
-@media(min-width:1280px){ .editor-grid{grid-template-columns:minmax(0,1fr) 420px;} }
-@media(min-width:1600px){ .editor-grid{grid-template-columns:minmax(0,1fr) 480px;} }
+/* 초안 칼럼은 화면이 커질수록 함께 커진다. 재료 쪽에 최소폭(520px)만 보장하고 나머지는 초안이 가져간다.
+   clamp 로 두면 1280px에서 420px, 1920px에서 720px 근처로 자연스럽게 늘어난다. */
+@media(min-width:1280px){ .editor-grid{grid-template-columns:minmax(620px,1fr) clamp(400px, 32%, 700px);} }
 .editor-ref{display:flex;flex-direction:column;gap:var(--sp-3);}
 @media(min-width:1280px){ .editor-ref{position:sticky;top:2px;max-height:calc(100dvh - 96px);overflow-y:auto;} }
 .ref-card{background:var(--soft);border:1px solid var(--brd2);border-radius:var(--r-md);padding:var(--sp-3) var(--sp-3);}
