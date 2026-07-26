@@ -2273,7 +2273,7 @@ function importRecords(p){
       const bs = nameBase(raw);
       if(bs) (baseAll[bs] = baseAll[bs] || []).push(tno);
     });
-    let matched=0, logAdd=0, pasteAdd=0, dup=0, byName=0, byBase=0;
+    let matched=0, logAdd=0, pasteAdd=0, dup=0, byName=0, byBase=0, evAdd=0, evKeep=0;
     const missing=[], ambig=[], conflict=[], collide=[], usedTno = Object.create(null);
     const ambigKeys = Object.create(null);
     const has = (o,k)=> Object.prototype.hasOwnProperty.call(o,k);
@@ -2341,13 +2341,28 @@ function importRecords(p){
         if((ar.paste||'').includes(paste)){ dup++; }
         else { ar.paste = ((ar.paste||'').trim() ? ar.paste.trim() + '\n\n' : '') + paste; pasteAdd++; }
       }
+      /* ── 학생별 활동 중 특이사항(ev) ──
+         위계 문장은 반 전체가 공유하므로, 이 칸이 학생을 서로 구별하는 유일한 재료다.
+         활동 키는 이 payload의 rubric.grp — 위 항목들이 묶인 그 활동에 붙는다(gkeyOf와 같은 키 공간).
+         ★교사가 이미 적어 둔 것은 절대 덮어쓰지 않는다(문장 씨앗과 같은 원칙). 덮어쓰면 손으로 쓴 관찰이 사라진다. */
+      const evKey = (rb && rb.grp) ? String(rb.grp) : '';
+      const evTxt = String(inc.ev || '').trim();
+      if(evKey && evTxt){
+        if(!ar.ev || typeof ar.ev !== 'object') ar.ev = {};
+        const prevEv = String(has(ar.ev, evKey) ? ar.ev[evKey] : '').trim();
+        if(prevEv === evTxt) dup++;
+        else if(!prevEv){ ar.ev[evKey] = evTxt; evAdd++; }
+        else evKeep++;
+      }
     });
     const _saved = save(); openNo=null; renderAll();
     // 저장이 실패했는데 '완료'라고 알리면 교사가 사라진 데이터를 모른 채 넘어간다.
     alert((_saved ? '' : '⚠ 저장에 실패했습니다(저장 공간 부족).\n지금 바로 [⬇ 백업]으로 파일을 내려받으세요. 새로고침하면 아래 내용이 사라집니다.\n\n')
       + `기록 병합 완료 — '${target}' 학생 ${matched}명\n누가기록 ${logAdd}건 · 참고자료 ${pasteAdd}건 추가`
       + (rb ? `\n평가 항목: ${itemsNew}개 생성 · 문장 ${itemsSeed}칸 채움 · 수준 ${lvSet}건 입력` : '')
+      + (evAdd ? `\n학생별 특이사항 ${evAdd}건 입력` : '')
       + (lvChanged ? `\n※ 이미 골라 둔 수준 ${lvChanged}건을 새 점수로 덮어썼습니다` : '')
+      + (evKeep ? `\n※ 이미 적혀 있던 특이사항 ${evKeep}건은 그대로 두었습니다(덮어쓰지 않음)` : '')
       + (byName ? `\n(번호가 달라 이름으로 매칭: ${byName}명)` : '')
       + (byBase ? `\n(괄호 표기 차이로 매칭: ${byBase}명 — 예: '홍길동' ↔ '홍길동(공동)')` : '')
       + (dup ? `\n(이미 있던 내용 ${dup}건은 건너뜀)` : '')
